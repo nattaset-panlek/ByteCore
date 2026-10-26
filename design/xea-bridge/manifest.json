@@ -1,0 +1,15 @@
+{
+  "name": "Xea Bridge",
+  "id": "xea-bridge-local-dev",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "permissions": [],
+  "networkAccess": {
+    "allowedDomains": ["ws://localhost:3055"],
+    "reasoning": "Connects to the local design build socket on this machine only.",
+    "devAllowedDomains": ["ws://localhost:3055"]
+  },
+  "documentAccess": "dynamic-page"
+}

@@ -1,0 +1,348 @@
+{
+ "Button": {
+  "set": "13:18234",
+  "variants": {
+   "Style=Standard, State=Rest, Icon=No": "13:18235",
+   "Style=Standard, State=Rest, Icon=Yes": "13:18237",
+   "Style=Standard, State=Hover, Icon=No": "13:18239",
+   "Style=Standard, State=Hover, Icon=Yes": "13:18241",
+   "Style=Standard, State=Pressed, Icon=No": "13:18243",
+   "Style=Standard, State=Pressed, Icon=Yes": "13:18245",
+   "Style=Standard, State=Disabled, Icon=No": "13:18247",
+   "Style=Standard, State=Disabled, Icon=Yes": "13:18249",
+   "Style=Accent, State=Rest, Icon=No": "13:18251",
+   "Style=Accent, State=Rest, Icon=Yes": "13:18253",
+   "Style=Accent, State=Hover, Icon=No": "13:18255",
+   "Style=Accent, State=Hover, Icon=Yes": "13:18257",
+   "Style=Accent, State=Pressed, Icon=No": "13:18259",
+   "Style=Accent, State=Pressed, Icon=Yes": "13:18261",
+   "Style=Accent, State=Disabled, Icon=No": "13:18263",
+   "Style=Accent, State=Disabled, Icon=Yes": "13:18265",
+   "Style=Subtle, State=Rest, Icon=No": "13:18267",
+   "Style=Subtle, State=Rest, Icon=Yes": "13:18269",
+   "Style=Subtle, State=Hover, Icon=No": "13:18271",
+   "Style=Subtle, State=Hover, Icon=Yes": "13:18273",
+   "Style=Subtle, State=Pressed, Icon=No": "13:18275",
+   "Style=Subtle, State=Pressed, Icon=Yes": "13:18277",
+   "Style=Subtle, State=Disabled, Icon=No": "13:18279",
+   "Style=Subtle, State=Disabled, Icon=Yes": "13:18281"
+  }
+ },
+ "IconButton": {
+  "set": "13:18343",
+  "variants": {
+   "State=Rest": "13:18344",
+   "State=Hover": "13:18346",
+   "State=Pressed": "13:18348"
+  }
+ },
+ "TextBox": {
+  "set": "13:18356",
+  "variants": {
+   "State=Rest, Icon=None": "13:18357",
+   "State=Rest, Icon=Search": "13:18359",
+   "State=Hover, Icon=None": "13:18361",
+   "State=Hover, Icon=Search": "13:18363",
+   "State=Focused, Icon=None": "13:18365",
+   "State=Focused, Icon=Search": "13:18367",
+   "State=Disabled, Icon=None": "13:18369",
+   "State=Disabled, Icon=Search": "13:18371"
+  }
+ },
+ "ComboBox": {
+  "set": "13:18415",
+  "variants": {
+   "State=Rest": "13:18416",
+   "State=Hover": "13:18418",
+   "State=Open": "13:18420",
+   "State=Disabled": "13:18422"
+  }
+ },
+ "ToggleSwitch": {
+  "set": "13:18440",
+  "variants": {
+   "Value=Off, State=Rest": "13:18441",
+   "Value=Off, State=Disabled": "13:18443",
+   "Value=On, State=Rest": "13:18445",
+   "Value=On, State=Disabled": "13:18447"
+  }
+ },
+ "CheckBox": {
+  "set": "13:18465",
+  "variants": {
+   "Value=Unchecked": "13:18466",
+   "Value=Checked": "13:18468",
+   "Value=Indeterminate": "13:18470"
+  }
+ },
+ "RadioButton": {
+  "set": "13:18483",
+  "variants": {
+   "Value=Off": "13:18484",
+   "Value=On": "13:18486"
+  }
+ },
+ "ProgressBar": {
+  "set": "13:18495",
+  "variants": {
+   "Status=Normal, Value=0": "13:18496",
+   "Status=Normal, Value=25": "13:18498",
+   "Status=Normal, Value=50": "13:18500",
+   "Status=Normal, Value=75": "13:18502",
+   "Status=Normal, Value=100": "13:18504",
+   "Status=Paused, Value=0": "13:18506",
+   "Status=Paused, Value=25": "13:18508",
+   "Status=Paused, Value=50": "13:18510",
+   "Status=Paused, Value=75": "13:18512",
+   "Status=Paused, Value=100": "13:18514",
+   "Status=Error, Value=0": "13:18516",
+   "Status=Error, Value=25": "13:18518",
+   "Status=Error, Value=50": "13:18520",
+   "Status=Error, Value=75": "13:18522",
+   "Status=Error, Value=100": "13:18524"
+  }
+ },
+ "InfoBar": {
+  "set": "13:18577",
+  "variants": {
+   "Severity=Informational": "13:18578",
+   "Severity=Success": "13:18580",
+   "Severity=Warning": "13:18582",
+   "Severity=Error": "13:18584"
+  }
+ },
+ "InfoBadge": {
+  "set": "13:18614",
+  "variants": {
+   "Severity=Attention, Kind=Dot": "13:18615",
+   "Severity=Attention, Kind=Value": "13:18617",
+   "Severity=Informational, Kind=Dot": "13:18619",
+   "Severity=Informational, Kind=Value": "13:18621",
+   "Severity=Success, Kind=Dot": "13:18623",
+   "Severity=Success, Kind=Value": "13:18625",
+   "Severity=Caution, Kind=Dot": "13:18627",
+   "Severity=Caution, Kind=Value": "13:18629",
+   "Severity=Critical, Kind=Dot": "13:18631",
+   "Severity=Critical, Kind=Value": "13:18633"
+  }
+ },
+ "Tooltip": {
+  "comp": "13:18651"
+ },
+ "MenuFlyoutItem": {
+  "set": "13:18657",
+  "variants": {
+   "Kind=Default, State=Rest": "13:18658",
+   "Kind=Default, State=Hover": "13:18660",
+   "Kind=Default, State=Disabled": "13:18662",
+   "Kind=Radio, State=Rest": "13:18664",
+   "Kind=Radio, State=Hover": "13:18666",
+   "Kind=Radio, State=Disabled": "13:18668",
+   "Kind=Check, State=Rest": "13:18670",
+   "Kind=Check, State=Hover": "13:18672",
+   "Kind=Check, State=Disabled": "13:18674",
+   "Kind=Submenu, State=Rest": "13:18676",
+   "Kind=Submenu, State=Hover": "13:18678",
+   "Kind=Submenu, State=Disabled": "13:18680"
+  }
+ },
+ "MenuFlyoutSeparator": {
+  "comp": "13:18755"
+ },
+ "NavigationViewItem": {
+  "set": "13:18761",
+  "variants": {
+   "State=Rest": "13:18762",
+   "State=Hover": "13:18764",
+   "State=Selected": "13:18766"
+  }
+ },
+ "TreeItem": {
+  "set": "13:18783",
+  "variants": {
+   "Expander=None, State=Rest": "13:18784",
+   "Expander=None, State=Hover": "13:18786",
+   "Expander=None, State=Selected": "13:18788",
+   "Expander=Collapsed, State=Rest": "13:18790",
+   "Expander=Collapsed, State=Hover": "13:18792",
+   "Expander=Collapsed, State=Selected": "13:18794",
+   "Expander=Expanded, State=Rest": "13:18796",
+   "Expander=Expanded, State=Hover": "13:18798",
+   "Expander=Expanded, State=Selected": "13:18800"
+  }
+ },
+ "TabViewItem": {
+  "set": "13:18853",
+  "variants": {
+   "State=Selected": "13:18854",
+   "State=Rest": "13:18856",
+   "State=Hover": "13:18858"
+  }
+ },
+ "AppBarButton": {
+  "set": "13:18878",
+  "variants": {
+   "Kind=Icon, State=Rest": "13:18879",
+   "Kind=Icon, State=Hover": "13:18881",
+   "Kind=Icon, State=Disabled": "13:18883",
+   "Kind=IconLabel, State=Rest": "13:18885",
+   "Kind=IconLabel, State=Hover": "13:18887",
+   "Kind=IconLabel, State=Disabled": "13:18889",
+   "Kind=IconLabelChevron, State=Rest": "13:18891",
+   "Kind=IconLabelChevron, State=Hover": "13:18893",
+   "Kind=IconLabelChevron, State=Disabled": "13:18895"
+  }
+ },
+ "AppBarSeparator": {
+  "comp": "13:18925"
+ },
+ "BreadcrumbItem": {
+  "set": "13:18931",
+  "variants": {
+   "Chevron=Yes": "13:18932",
+   "Chevron=No": "13:18934"
+  }
+ },
+ "ListItem": {
+  "set": "13:18941",
+  "variants": {
+   "State=Rest": "13:18942",
+   "State=Hover": "13:18944",
+   "State=Selected": "13:18946"
+  }
+ },
+ "StatCard": {
+  "comp": "13:18970"
+ },
+ "RarityLabel": {
+  "set": "13:18980",
+  "variants": {
+   "Rarity=Common": "13:18981",
+   "Rarity=Rare": "13:18983",
+   "Rarity=Epic": "13:18985",
+   "Rarity=Legendary": "13:18987"
+  }
+ },
+ "CaptionButton": {
+  "set": "13:19001",
+  "variants": {
+   "Type=Minimize, State=Rest": "13:19002",
+   "Type=Minimize, State=Hover": "13:19004",
+   "Type=Minimize, State=Pressed": "13:19006",
+   "Type=Maximize, State=Rest": "13:19008",
+   "Type=Maximize, State=Hover": "13:19010",
+   "Type=Maximize, State=Pressed": "13:19012",
+   "Type=Restore, State=Rest": "13:19014",
+   "Type=Restore, State=Hover": "13:19016",
+   "Type=Restore, State=Pressed": "13:19018",
+   "Type=Close, State=Rest": "13:19020",
+   "Type=Close, State=Hover": "13:19022",
+   "Type=Close, State=Pressed": "13:19024"
+  }
+ },
+ "TaskbarButton": {
+  "set": "13:19050",
+  "variants": {
+   "State=Rest": "13:19051",
+   "State=Hover": "13:19053",
+   "State=Running": "13:19055",
+   "State=Active": "13:19057"
+  }
+ },
+ "StartPinnedTile": {
+  "set": "13:19071",
+  "variants": {
+   "State=Rest": "13:19072",
+   "State=Hover": "13:19074"
+  }
+ },
+ "StartRecommendedItem": {
+  "set": "13:19082",
+  "variants": {
+   "State=Rest": "13:19083",
+   "State=Hover": "13:19085"
+  }
+ },
+ "FileItem": {
+  "set": "13:19097",
+  "variants": {
+   "View=ExtraLarge, State=Rest": "13:19098",
+   "View=ExtraLarge, State=Hover": "13:19100",
+   "View=ExtraLarge, State=Selected": "13:19102",
+   "View=Large, State=Rest": "13:19104",
+   "View=Large, State=Hover": "13:19106",
+   "View=Large, State=Selected": "13:19108",
+   "View=Medium, State=Rest": "13:19110",
+   "View=Medium, State=Hover": "13:19112",
+   "View=Medium, State=Selected": "13:19114",
+   "View=Small, State=Rest": "13:19116",
+   "View=Small, State=Hover": "13:19118",
+   "View=Small, State=Selected": "13:19120",
+   "View=List, State=Rest": "13:19122",
+   "View=List, State=Hover": "13:19124",
+   "View=List, State=Selected": "13:19126",
+   "View=Details, State=Rest": "13:19128",
+   "View=Details, State=Hover": "13:19130",
+   "View=Details, State=Selected": "13:19132",
+   "View=Tiles, State=Rest": "13:19134",
+   "View=Tiles, State=Hover": "13:19136",
+   "View=Tiles, State=Selected": "13:19138",
+   "View=Content, State=Rest": "13:19140",
+   "View=Content, State=Hover": "13:19142",
+   "View=Content, State=Selected": "13:19144"
+  }
+ },
+ "DetailsHeader": {
+  "comp": "13:19288"
+ },
+ "SettingsCard": {
+  "set": "13:19308",
+  "variants": {
+   "Trailing=Navigation, Description=Yes": "13:19309",
+   "Trailing=Navigation, Description=No": "13:19311",
+   "Trailing=ToggleOn, Description=Yes": "13:19313",
+   "Trailing=ToggleOn, Description=No": "13:19315",
+   "Trailing=ToggleOff, Description=Yes": "13:19317",
+   "Trailing=ToggleOff, Description=No": "13:19319",
+   "Trailing=ComboBox, Description=Yes": "13:19321",
+   "Trailing=ComboBox, Description=No": "13:19323",
+   "Trailing=Button, Description=Yes": "13:19325",
+   "Trailing=Button, Description=No": "13:19327",
+   "Trailing=Text, Description=Yes": "13:19329",
+   "Trailing=Text, Description=No": "13:19331",
+   "Trailing=None, Description=Yes": "13:19333",
+   "Trailing=None, Description=No": "13:19335"
+  }
+ },
+ "TitleBar": {
+  "set": "13:19454",
+  "variants": {
+   "Kind=Default": "13:19455",
+   "Kind=Back": "13:19457"
+  }
+ },
+ "ContentDialog": {
+  "set": "13:19491",
+  "variants": {
+   "Buttons=Three": "13:19492",
+   "Buttons=Two": "13:19494",
+   "Buttons=One": "13:19496"
+  }
+ },
+ "ToastNotification": {
+  "set": "13:19540",
+  "variants": {
+   "Actions=No": "13:19541",
+   "Actions=Yes": "13:19543"
+  }
+ },
+ "Taskbar": {
+  "set": "13:19574",
+  "variants": {
+   "Mode=Default": "13:19575",
+   "Mode=StartOpen": "13:19577",
+   "Mode=AppActive": "13:19579",
+   "Mode=Notifications": "13:19581"
+  }
+ }
+}

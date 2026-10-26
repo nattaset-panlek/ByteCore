@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<body style="margin:0;font:12px/1.4 Segoe UI,system-ui,sans-serif;background:#202020;color:#fff">
+  <div style="padding:12px">
+    <div style="font-weight:600">Xea Bridge</div>
+    <div id="status" style="color:#9d9d9d;margin-top:4px">Connecting to ws://localhost:3055 ...</div>
+    <div id="count" style="color:#9d9d9d;margin-top:4px"></div>
+  </div>
+  <script>
+    const CHANNEL = "xea";
+    const statusEl = document.getElementById("status");
+    const countEl = document.getElementById("count");
+    let ws, done = 0;
+
+    function connect() {
+      ws = new WebSocket("ws://localhost:3055");
+      ws.onopen = () => ws.send(JSON.stringify({ type: "join", channel: CHANNEL }));
+      ws.onmessage = (ev) => {
+        const data = JSON.parse(ev.data);
+        if (data.type === "system" && data.message && data.message.result) {
+          statusEl.textContent = "Connected (channel " + CHANNEL + ")";
+          statusEl.style.color = "#6ccb5f";
+          return;
+        }
+        const m = data.message;
+        if (m && m.command === "exec" && m.id) {
+          parent.postMessage({ pluginMessage: { type: "exec", id: m.id, code: m.params.code } }, "*");
+        }
+      };
+      ws.onclose = () => {
+        statusEl.textContent = "Disconnected, retrying...";
+        statusEl.style.color = "#ff99a4";
+        setTimeout(connect, 2000);
+      };
+    }
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg || msg.type !== "result") return;
+      done++;
+      countEl.textContent = done + " scripts run";
+      const payload = msg.error ? { id: msg.id, error: msg.error } : { id: msg.id, result: msg.result };
+      ws.send(JSON.stringify({ id: msg.id, type: "message", channel: CHANNEL, message: payload }));
+    };
+
+    connect();
+  </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+{
+ "Chimera OS / 03 Windows": {
+  "section": "8:5572",
+  "ids": {
+   "profile": "8:4320",
+   "mining": "8:4430",
+   "wallet": "8:4504",
+   "logs": "8:4573",
+   "rigShop": "8:4665",
+   "rigUp": "8:4813",
+   "tasks": "8:4984",
+   "terminal": "8:5217",
+   "network": "8:5269",
+   "contracts": "8:5433"
+  },
+  "bounds": {
+   "x": 0,
+   "y": 0,
+   "w": 2720,
+   "h": 2540
+  }
+ },
+ "Chimera OS / 04 Chimera Kit states": {
+  "section": "8:6058",
+  "ids": {
+   "idle": "8:5573",
+   "encrypting": "8:5644",
+   "connected": "8:5727",
+   "critical": "8:5907"
+  },
+  "bounds": {
+   "x": 0,
+   "y": 2740,
+   "w": 3560,
+   "h": 1218
+  }
+ },
+ "Chimera OS / 05 Modals & Overlays": {
+  "section": "8:6371",
+  "ids": {
+   "startMenu": "8:6059",
+   "contextMenu": "8:6125",
+   "toasts": "8:6152",
+   "tooltip": "8:6183",
+   "shutdown": "8:6189",
+   "reset": "8:6204",
+   "funds": "8:6219",
+   "ram": "8:6238",
+   "ip": "8:6253",
+   "success": "8:6268",
+   "failed": "8:6296",
+   "levelup": "8:6318",
+   "offline": "8:6347"
+  },
+  "bounds": {
+   "x": 0,
+   "y": 4158,
+   "w": 2200,
+   "h": 1435
+  }
+ },
+ "Chimera OS / 02 Screens": {
+  "section": "8:7286",
+  "ids": {
+   "boot": "8:6372",
+   "desktop": "8:6384",
+   "start": "8:6463",
+   "firstLoad": "8:6608",
+   "hacking": "8:6871",
+   "modal": "8:7187",
+   "shutdown": "8:7282"
+  }
+ },
+ "Chimera OS / 01 Foundations": {
+  "section": "8:7461",
+  "ids": {
+   "colors": "8:7287"
+  },
+  "bounds": {
+   "x": 0,
+   "y": -6500,
+   "w": 2263,
+   "h": 668
+  }
+ }
+}

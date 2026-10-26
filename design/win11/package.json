@@ -1,0 +1,16 @@
+{
+  "name": "figma-tool",
+  "private": true,
+  "scripts": {
+    "typecheck": "bun check"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}
