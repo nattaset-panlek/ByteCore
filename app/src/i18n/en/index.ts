@@ -10,5 +10,6 @@ import contracts from "./contracts";
 import taskmgr from "./taskmgr";
 import modules from "./modules";
 import legal from "./legal";
+import scripteditor from "./scripteditor";
 
-export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal } as const;
+export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor } as const;

@@ -14,5 +14,6 @@ Figma conventions in [`tools/figma-build/STYLE_NOTES.md`](../tools/figma-build/S
 | [hacking.md](hacking.md) | Phase 4 systems: network, jobs, Terminal, trace, Chimera Kit, exchange, Contracts, modules, Task Manager |
 | [i18n.md](i18n.md) | Localization: t(), fmt, dictionaries, adding a language |
 | [risk.md](risk.md) | Phase 5: Heat, warrant, bail/debt, prison, paperwork and jailbreak mini-games |
+| [scripting.md](scripting.md) | Phase 6: Script Editor, the Web Worker runtime and the ByteCore scripting API |
 
 Keep these docs up to date when a system changes.

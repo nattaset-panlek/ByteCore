@@ -7,6 +7,7 @@ import { Terminal } from "./terminal/Terminal";
 import { ChimeraKit } from "./ChimeraKit";
 import { Contracts } from "./Contracts";
 import { TaskManager } from "./TaskManager";
+import { ScriptEditor } from "./scriptEditor/ScriptEditor";
 import { FileExplorer } from "./FileExplorer";
 import { RigManager } from "./RigManager";
 import { RigStock } from "./RigStock";
@@ -25,7 +26,7 @@ export const APP_COMPONENTS: Record<AppId, ComponentType> = {
   taskManager: TaskManager,
   profile: PlaceholderBody,
   settings: SettingsApp,
-  scriptEditor: PlaceholderBody,
+  scriptEditor: ScriptEditor,
   contracts: Contracts,
   chimeraKit: ChimeraKit,
 };

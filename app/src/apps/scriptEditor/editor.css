@@ -1,0 +1,51 @@
+/* Script Editor: VS-Code-ish dark editor over the VFS. */
+.editor { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg-solid-secondary); }
+.editor-toolbar { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; flex: none; background: var(--bg-layer); border-bottom: 1px solid var(--stroke-divider); }
+.editor-toolbar .btn { min-width: 0; }
+.editor-main { flex: 1; min-height: 0; display: flex; }
+
+.editor-files { width: 200px; flex: none; display: flex; flex-direction: column; gap: 2px; padding: 8px; overflow-y: auto; background: var(--bg-layer); }
+.editor-files-head { padding: 4px 8px; }
+.editor-files-empty { padding: 8px; }
+.editor-file { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; background: none; border: 0; border-radius: var(--r-control); color: var(--text-primary); text-align: left; font-size: 13px; }
+.editor-file:hover { background: var(--subtle-hover); }
+.editor-file.on { background: var(--subtle-selected); }
+
+.editor-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.editor-tabs { display: flex; height: 36px; flex: none; background: var(--bg-layer); overflow-x: auto; }
+.editor-tab { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 4px 0 14px; border-right: 1px solid var(--stroke-divider); color: var(--text-secondary); font-size: 13px; white-space: nowrap; }
+.editor-tab.on { background: var(--bg-solid-secondary); color: var(--text-primary); }
+.editor-tab .icon-btn img { width: 10px; height: 10px; }
+
+.editor-code { flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; font: 400 13px/20px var(--mono); }
+.editor-gutter { flex: none; width: 48px; padding: 8px 8px 8px 0; text-align: right; color: var(--text-tertiary); background: var(--bg-solid-secondary); overflow: hidden; user-select: none; }
+.editor-input { position: relative; flex: 1; min-width: 0; }
+.editor-highlight, .editor-textarea {
+  position: absolute; inset: 0; margin: 0; padding: 8px 12px; border: 0;
+  font: inherit; white-space: pre; overflow: auto; tab-size: 2;
+}
+.editor-highlight { color: var(--term-text); pointer-events: none; z-index: 0; }
+.editor-textarea { background: transparent; color: transparent; caret-color: var(--text-primary); resize: none; outline: 0; z-index: 1; }
+.editor-textarea::selection { background: #3b78ff55; }
+
+.tok-comment { color: #6a9955; }
+.tok-string { color: #ce9178; }
+.tok-keyword { color: #569cd6; }
+.tok-literal { color: #569cd6; }
+.tok-number { color: #b5cea8; }
+.tok-api { color: #4ec9b0; }
+
+.editor-console { height: 160px; flex: none; overflow-y: auto; padding: 8px 12px; background: var(--term-bg); border-top: 1px solid var(--stroke-divider); font: 400 12px/18px var(--mono); user-select: text; }
+.editor-log { white-space: pre-wrap; overflow-wrap: anywhere; }
+.log-info { color: var(--term-text); }
+.log-warn { color: var(--term-yellow); }
+.log-error { color: var(--term-red); }
+.log-sys { color: #7fa7d8; }
+
+.editor-status { display: flex; align-items: center; gap: 12px; height: 24px; flex: none; padding: 0 12px; background: var(--bg-layer); color: var(--text-secondary); border-top: 1px solid var(--stroke-divider); }
+
+.editor-import { width: 520px; }
+.editor-drop { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; border: 1px dashed var(--stroke-control-strong); border-radius: var(--r-control); background: #ffffff06; }
+.editor-drop.over { border-color: var(--accent); background: #60cdff14; }
+.editor-import-text { height: 160px; padding: 10px 12px; background: var(--term-bg); border: 1px solid var(--stroke-control); border-radius: var(--r-control); color: var(--term-text); font: 400 12px/18px var(--mono); outline: 0; resize: vertical; }
+.editor-import-text:focus { border-color: var(--accent); }
