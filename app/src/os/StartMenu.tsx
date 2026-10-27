@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { APPS, APP_ORDER, appName } from "./apps";
 import { useWindows } from "./windowStore";
 import { useShell } from "./shellStore";
+import { openContextMenu } from "./contextMenu";
 import { Icon, TextBox } from "../ui";
 import { useT } from "../i18n";
 
@@ -56,7 +57,7 @@ export function StartMenu() {
         </div>
         <div className="start-grid">
           {apps.map((id) => (
-            <button type="button" key={id} className="start-app" onClick={() => launch(id)}>
+            <button type="button" key={id} className="start-app" onClick={() => launch(id)} onContextMenu={(e) => openContextMenu(e, [{ label: t("ctx.open"), icon: APPS[id].icon, onClick: () => launch(id) }])}>
               <Icon name={APPS[id].icon} size={32} />
               <span className="t-caption">{appName(id)}</span>
             </button>

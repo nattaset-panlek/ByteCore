@@ -69,3 +69,13 @@ const id = notify({
 Bottom right above the taskbar, at most 4 visible, up to 2 action buttons, hover pauses auto dismiss.
 
 `os/gameNotifications.ts` turns game events into toasts (`orderDelivered`, `levelUp`, `heatMax`, `interestCharged`).
+
+## Context menus — `os/contextMenu.ts`, `os/ContextMenuHost.tsx`
+
+Right-click works across the OS. Components call `openContextMenu(e, items)` from `onContextMenu` (items: `{ label, icon, onClick, danger, disabled }`, `separator` for a divider); `ContextMenuHost` renders the menu at the cursor, clamped to the screen, and closes on outside click or Escape.
+
+- Desktop (Refresh, open apps, Personalize), desktop icons and Start tiles (Open)
+- Taskbar buttons (open, New window, Close) and empty taskbar (Task Manager, Taskbar settings)
+- Any spot inside a window falls back to a window menu (Minimize, Maximize/Restore, Close)
+- App-specific menus: File Explorer (items and empty space), Terminal (New tab, Copy all output, Clear), Task Manager rows (Switch to, End task)
+- The browser's own menu is suppressed everywhere except text fields, which keep native copy/paste.

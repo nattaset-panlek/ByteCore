@@ -2,6 +2,7 @@ import { Component, createContext, useContext, type PointerEvent as RPointerEven
 import { APPS, appName } from "./apps";
 import { TASKBAR_H, useWindows, type Rect, type WinState } from "./windowStore";
 import { Icon } from "../ui";
+import { openContextMenu, separator } from "./contextMenu";
 import { t as translate, useT } from "../i18n";
 
 const MIN_W = 360;
@@ -86,6 +87,17 @@ export function Window({ win, children }: { win: WinState; children: ReactNode }
         className={`window ${win.maximized ? "maximized" : ""}`}
         style={{ ...style, display: win.minimized ? "none" : undefined }}
         onPointerDownCapture={() => focus(win.id)}
+        onContextMenu={(e) => {
+          // Fallback window menu for any spot without its own; text fields keep the native menu.
+          if ((e.target as HTMLElement).closest("input, textarea")) return;
+          const ws = useWindows.getState();
+          openContextMenu(e, [
+            { label: translate("window.minimize"), icon: "icon/subtract", onClick: () => ws.minimize(win.id) },
+            { label: translate(win.maximized ? "window.restore" : "window.maximize"), icon: win.maximized ? "icon/square_multiple" : "icon/maximize", onClick: () => ws.toggleMaximize(win.id) },
+            separator,
+            { label: translate("window.close"), icon: "icon/dismiss", danger: true, onClick: () => ws.close(win.id) },
+          ]);
+        }}
         data-app={win.appId}
       >
         {app.chrome === "titlebar" && <TitleBar />}

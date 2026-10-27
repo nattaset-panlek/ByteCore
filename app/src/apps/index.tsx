@@ -5,7 +5,7 @@ import { Browser } from "./browser/Browser";
 import { Terminal } from "./terminal/Terminal";
 import { ChimeraKit } from "./ChimeraKit";
 import { Contracts } from "./Contracts";
-import { TaskManager } from "./TaskManager";
+import { TaskManager } from "./taskmgr/TaskManager";
 import { ScriptEditor } from "./scriptEditor/ScriptEditor";
 import { Profile } from "./Profile";
 import { FileExplorer } from "./FileExplorer";

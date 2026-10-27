@@ -5,6 +5,7 @@ import { useTutorial } from "../os/useTutorial";
 import { StartMenu } from "../os/StartMenu";
 import { Taskbar } from "../os/Taskbar";
 import { ToastStack } from "../os/ToastStack";
+import { ContextMenu } from "../os/ContextMenuHost";
 import { Window } from "../os/Window";
 import { useShell } from "../os/shellStore";
 import { useWindows } from "../os/windowStore";
@@ -48,6 +49,7 @@ export function DesktopScreen() {
       <StartMenu />
       <ToastStack />
       <Taskbar />
+      <ContextMenu />
     </div>
   );
 }

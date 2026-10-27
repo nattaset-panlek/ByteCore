@@ -42,7 +42,7 @@ export const APPS: Record<AppId, AppDef> = {
   rigManager: def("rigManager", "Rig Manager", "app/RigManager", [1100, 720], "custom"),
   rigStock: def("rigStock", "Rig Stock", "icon/square_multiple", [1040, 680], "custom"),
   wallet: def("wallet", "Wallet", "app/Wallet", [1040, 720], "custom"),
-  taskManager: def("taskManager", "Task Manager", "app/TaskManager", [1000, 660]),
+  taskManager: def("taskManager", "Task Manager", "app/TaskManager", [980, 640], "custom"),
   profile: def("profile", "Profile", "app/Profile", [960, 660]),
   settings: def("settings", "Settings", "app/Settings", [1100, 720], "custom"),
   scriptEditor: def("scriptEditor", "Script Editor", "icon/document", [1100, 720]),

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { openContextMenu, separator } from "../os/contextMenu";
 import { create } from "zustand";
 import { diskUsage, useGame } from "../game/store";
 import type { FileKind, VNode } from "../game/types";
@@ -294,7 +295,26 @@ export function FileExplorer() {
           </button>
         </nav>
 
-        <div className="fe-content" ref={bodyRef} tabIndex={0} onKeyDown={onKey} onPointerDown={(e) => e.target === e.currentTarget && setSelected([])}>
+        <div
+          className="fe-content"
+          ref={bodyRef}
+          tabIndex={0}
+          onKeyDown={onKey}
+          onPointerDown={(e) => e.target === e.currentTarget && setSelected([])}
+          onContextMenu={(e) => {
+            setSelected([]);
+            openContextMenu(e, [
+              { label: tr("explorer.newFolder"), icon: "icon/add", onClick: newFolder },
+              { label: tr("explorer.paste"), icon: "icon/copy", disabled: !useClipboard.getState().paths.length, onClick: paste },
+              separator,
+              { label: tr("ctx.sortName"), icon: "icon/arrow_sort", onClick: () => setSort("name") },
+              { label: tr("ctx.sortSize"), icon: "icon/arrow_sort", onClick: () => setSort("size") },
+              { label: tr("ctx.sortDate"), icon: "icon/arrow_sort", onClick: () => setSort("modified") },
+              separator,
+              { label: tr("explorer.refresh"), icon: "icon/arrow_clockwise", onClick: () => setError("") },
+            ]);
+          }}
+        >
           {error && <InfoBar severity="error" title={tr("explorer.error")} message={error} onClose={() => setError("")} />}
           <div className="fe-grid" onPointerDown={(e) => e.target === e.currentTarget && setSelected([])}>
             {items.map((n) => {
@@ -309,6 +329,22 @@ export function FileExplorer() {
                     if (!isSel || e.ctrlKey) select(n.name, e.ctrlKey || e.metaKey);
                   }}
                   onDoubleClick={() => open(n)}
+                  onContextMenu={(e) => {
+                    const names = isSel ? selected : [n.name];
+                    if (!isSel) setSelected([n.name]);
+                    const paths = names.map((x) => child(path, x));
+                    openContextMenu(e, [
+                      { label: tr("explorer.open"), icon: n.type === "dir" ? "app/FileExplorer" : "icon/document", onClick: () => open(n) },
+                      separator,
+                      { label: tr("explorer.cut"), icon: "icon/cut", onClick: () => clip.set(paths, true) },
+                      { label: tr("explorer.copy"), icon: "icon/copy", onClick: () => clip.set(paths, false) },
+                      separator,
+                      { label: tr("explorer.rename"), icon: "icon/rename", disabled: names.length !== 1, onClick: () => setRenaming(n.name) },
+                      { label: tr("explorer.delete"), icon: "icon/delete", danger: true, onClick: () => setConfirmDelete(true) },
+                      separator,
+                      { label: tr("explorer.details"), icon: "icon/info", onClick: () => setDetails(true) },
+                    ]);
+                  }}
                   title={`${n.name}\n${typeLabel(n)} · ${fileSize(vfs.sizeOf(n))}`}
                 >
                   <FileIcon node={n} size={56} />

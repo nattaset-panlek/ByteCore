@@ -3,6 +3,7 @@ import { APPS, PINNED_APPS, appName, type AppId } from "./apps";
 import { activeWindow, useWindows } from "./windowStore";
 import { useShell } from "./shellStore";
 import { Icon } from "../ui";
+import { openContextMenu, separator } from "./contextMenu";
 import { useGame } from "../game/store";
 import { incomePerHour } from "../game/state";
 import { fmt, useT } from "../i18n";
@@ -70,7 +71,15 @@ export function Taskbar() {
   const heatTone = heat > 0.75 ? "critical" : heat > 0.5 ? "caution" : "success";
 
   return (
-    <div className="taskbar">
+    <div
+      className="taskbar"
+      onContextMenu={(e) =>
+        openContextMenu(e, [
+          { label: appName("taskManager"), icon: APPS.taskManager.icon, onClick: () => activateApp("taskManager") },
+          { label: t("ctx.taskbarSettings"), icon: "icon/settings", onClick: () => activateApp("settings") },
+        ])
+      }
+    >
       <div className="taskbar-left">
         <button type="button" className="tb-widget" onClick={() => activateApp("wallet")}>
           <Icon name="app/Wallet" size={20} />
@@ -105,6 +114,15 @@ export function Taskbar() {
               className={`tb-btn ${isActive ? "active" : ""}`}
               title={appName(id)}
               onClick={() => activateApp(id)}
+              onContextMenu={(e) => {
+                const ws = useWindows.getState();
+                const own = ws.windows.filter((w) => w.appId === id);
+                openContextMenu(e, [
+                  { label: appName(id), icon: APPS[id].icon, onClick: () => activateApp(id) },
+                  ...(APPS[id].multiInstance || own.length === 0 ? [{ label: t("ctx.newWindow"), icon: "icon/add", onClick: () => ws.open(id) }] : []),
+                  ...(own.length ? [separator, { label: t(own.length > 1 ? "ctx.closeAll" : "ctx.closeWindow"), icon: "icon/dismiss", danger: true, onClick: () => own.forEach((w) => ws.close(w.id)) }] : []),
+                ]);
+              }}
             >
               <Icon name={APPS[id].icon} size={24} />
               {isRunning && <span className="tb-indicator" />}

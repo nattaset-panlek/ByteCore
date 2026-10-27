@@ -29,7 +29,15 @@ export default function App() {
         playSound("click");
     };
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    const onCtx = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      if (!el.closest("input, textarea, [contenteditable='true']")) e.preventDefault();
+    };
+    document.addEventListener("contextmenu", onCtx);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("contextmenu", onCtx);
+    };
   }, []);
 
   if (phase === "boot" || !loaded) return <BootScreen onDone={() => setPhase((p) => (p === "boot" ? "signin" : p))} />;

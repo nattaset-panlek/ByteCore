@@ -250,3 +250,16 @@ body.dragging iframe { pointer-events: none; }
 @keyframes signin-blink { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
 .signin-enter { height: 36px; padding: 0 20px; border-radius: 18px; background: #ffffff14; border: 1px solid var(--stroke-control); color: var(--text-primary); }
 .signin-enter:hover { background: #ffffff24; }
+
+/* Context menu */
+.ctx-smoke { position: fixed; inset: 0; z-index: 25000; }
+.ctx-menu { position: absolute; min-width: 200px; padding: 4px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--bg-flyout); border: 1px solid var(--stroke-surface); border-radius: var(--r-overlay); }
+.ctx-item { display: flex; align-items: center; gap: 12px; height: 32px; padding: 0 12px; background: none; border: 0; border-radius: var(--r-control); color: var(--text-primary); text-align: left; font-size: 14px; }
+.ctx-item img { width: 16px; height: 16px; }
+.ctx-icon-gap { width: 16px; }
+.ctx-item:hover { background: var(--subtle-hover); }
+.ctx-item:disabled { color: var(--text-disabled); }
+.ctx-item.danger { color: var(--critical); }
+.ctx-item.danger:hover { background: var(--critical-bg); }
+.ctx-sep { height: 1px; margin: 4px 8px; background: var(--stroke-divider); }
