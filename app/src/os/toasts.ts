@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ToastAction } from "../ui";
 import { APPS, appName, type AppId } from "./apps";
+import { playSound, type SoundName } from "./sound";
 import { t } from "../i18n";
 
 export interface Toast {
@@ -23,6 +24,8 @@ export interface NotifyOptions {
   message?: string;
   actions?: ToastAction[];
   duration?: number;
+  /** Sound on appear; defaults to "notify", null for silent. */
+  sound?: SoundName | null;
 }
 
 const MAX_VISIBLE = 4;
@@ -55,6 +58,7 @@ export function notify(opts: NotifyOptions): number {
     actions: opts.actions,
     duration,
   });
+  if (opts.sound !== null) playSound(opts.sound ?? "notify");
   return id;
 }
 

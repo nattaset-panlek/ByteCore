@@ -27,6 +27,7 @@ export function useGameNotifications() {
                 { label: t("toast.dismiss") },
               ],
               duration: 0,
+              sound: "delivery",
             });
             break;
           case "levelUp": {

@@ -16,5 +16,6 @@ Figma conventions in [`tools/figma-build/STYLE_NOTES.md`](../tools/figma-build/S
 | [risk.md](risk.md) | Phase 5: Heat, warrant, bail/debt, prison, paperwork and jailbreak mini-games |
 | [scripting.md](scripting.md) | Phase 6: Script Editor, the Web Worker runtime and the ByteCore scripting API |
 | [progression.md](progression.md) | Phase 7: character/progression data, levels & unlocks, Profile, Settings, tutorial, balance |
+| [release.md](release.md) | Phase 8: sounds, animations, boot & sign-in, icon, version, portable .exe + installer |
 
 Keep these docs up to date when a system changes.

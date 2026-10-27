@@ -13,5 +13,6 @@ import legal from "./legal";
 import scripteditor from "./scripteditor";
 import profile from "./profile";
 import tutorial from "./tutorial";
+import boot from "./boot";
 
-export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...profile, ...tutorial } as const;
+export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...profile, ...tutorial, ...boot } as const;
