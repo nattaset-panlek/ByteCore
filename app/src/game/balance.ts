@@ -20,6 +20,19 @@ export const HEAT_DECAY_PER_MIN = 2;
 export const DEBT_DAILY_INTEREST = 0.05;
 export const DEBT_LIMIT = 20000;
 
+// Risk and consequences (GDD 3.6). Bail scales with level and how much data was sold.
+export const BAIL = { base: 800, perLevel: 400, perHash: 60 };
+/** Base prison sentence; served in real time. */
+export const PRISON_BASE_MS = 5 * 60 * 1000;
+/** Each correct paperwork sheet cuts this off the sentence; a wrong one adds a little. */
+export const PAPERWORK_REDUCTION_MS = 30 * 1000;
+export const PAPERWORK_PENALTY_MS = 8 * 1000;
+/** Time limit for the one-shot jailbreak puzzle. */
+export const JAILBREAK_TIME_MS = 25 * 1000;
+/** Scrub logs: careful play. Removes SCRUB_CHUNK heat for SCRUB_CHUNK × cost credits. */
+export const SCRUB_CHUNK = 20;
+export const SCRUB_COST_PER_POINT = 10;
+
 /** Second-hand price = model price x factor x condition. */
 export const RESELL_FACTOR = 0.5;
 /** Condition lost when a part is replaced and goes to Rig Stock. */

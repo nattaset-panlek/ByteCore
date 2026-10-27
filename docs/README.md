@@ -13,5 +13,6 @@ Figma conventions in [`tools/figma-build/STYLE_NOTES.md`](../tools/figma-build/S
 | [phase4-scope.md](phase4-scope.md) | Phase 4 plan: decisions, commands, network, trace, Chimera Kit, exchange, Contracts, localization |
 | [hacking.md](hacking.md) | Phase 4 systems: network, jobs, Terminal, trace, Chimera Kit, exchange, Contracts, modules, Task Manager |
 | [i18n.md](i18n.md) | Localization: t(), fmt, dictionaries, adding a language |
+| [risk.md](risk.md) | Phase 5: Heat, warrant, bail/debt, prison, paperwork and jailbreak mini-games |
 
 Keep these docs up to date when a system changes.

@@ -15,8 +15,9 @@ export type JobOutcome =
 export type GameEvent =
   | { type: "orderDelivered"; order: Order }
   | { type: "levelUp"; level: number }
-  | { type: "heatMax" }
   | { type: "interestCharged"; amount: number }
+  | { type: "warrant"; bail: number }
+  | { type: "released" }
   | { type: "jobComplete"; job: Job; outcome: JobOutcome }
   | { type: "traced"; ip: string }
   | { type: "traceWarning"; ip: string; secondsLeft: number }

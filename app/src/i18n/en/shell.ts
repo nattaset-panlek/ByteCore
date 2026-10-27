@@ -87,4 +87,6 @@ export default {
   "ui.rarity.Rare": "Rare",
   "ui.rarity.Epic": "Epic",
   "ui.rarity.Legendary": "Legendary",
+  "taskbar.heatHint": "Heat draws attention. Scrub logs to cool down.",
+  "taskbar.scrub": "Scrub logs ({amount})",
 } as const;

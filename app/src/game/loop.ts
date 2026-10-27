@@ -11,8 +11,8 @@ import {
 } from "./balance";
 import type { GameEvent } from "./events";
 import { TRACE_PER_SEC } from "./network";
-import { incomePerHour, uid, type GameState } from "./state";
-import type { Order, OrderStage, Session, Txn } from "./types";
+import { bailAmount, incomePerHour, uid, type GameState } from "./state";
+import type { Legal, Order, OrderStage, Session, Txn } from "./types";
 
 export const STAGE_LABELS = ["Ordered", "Packed", "On the way", "Delivered"] as const;
 
@@ -38,6 +38,14 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
 
   let { wallet, txns, heat, orders } = g;
   let session: Session | null = g.net.session;
+  let legal: Legal = g.legal;
+
+  // Prison release: served the full sentence (GDD 3.6.3).
+  if (legal.state === "prison" && now >= legal.until) {
+    legal = { state: "free" };
+    heat = 0;
+    events.push({ type: "released" });
+  }
 
   // Trace while connected (GDD 3.6): disconnect is forced at 100.
   if (session) {
@@ -100,6 +108,16 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
     }
   }
 
+  // Warrant when Heat reaches the limit while free (GDD 3.6): lock down and drop any session/jobs.
+  let jobs = g.jobs;
+  if (heat >= HEAT_MAX && legal.state === "free") {
+    const bail = bailAmount({ ...g, heat });
+    legal = { state: "warrant", bail };
+    session = null;
+    jobs = [];
+    events.push({ type: "warrant", bail });
+  }
+
   const net = session === g.net.session ? g.net : { ...g.net, session };
-  return { game: { ...g, lastTick: now, wallet, txns, heat, orders, net }, events };
+  return { game: { ...g, lastTick: now, wallet, txns, heat, orders, net, legal, jobs }, events };
 }

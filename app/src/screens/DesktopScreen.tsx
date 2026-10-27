@@ -7,13 +7,17 @@ import { ToastStack } from "../os/ToastStack";
 import { Window } from "../os/Window";
 import { useShell } from "../os/shellStore";
 import { useWindows } from "../os/windowStore";
+import { useGame } from "../game/store";
 import { useT } from "../i18n";
+import { WarrantScreen } from "./WarrantScreen";
+import { PrisonScreen } from "./PrisonScreen";
 
 /** Xea OS desktop: wallpaper + shortcuts, windows, taskbar, Start, toasts. */
 export function DesktopScreen() {
   const t = useT();
   const windows = useWindows((s) => s.windows);
   const { poweredOff, powerOn } = useShell();
+  const legal = useGame((s) => s.game.legal);
   useGameNotifications();
 
   if (poweredOff) {
@@ -23,6 +27,10 @@ export function DesktopScreen() {
       </div>
     );
   }
+
+  // Risk and consequences (GDD 3.6): the desktop is locked behind a warrant or a prison sentence.
+  if (legal.state === "warrant") return <WarrantScreen bail={legal.bail} />;
+  if (legal.state === "prison") return <PrisonScreen until={legal.until} jailbreakUsed={legal.jailbreakUsed} jailbreakLocked={legal.jailbreakLocked} />;
 
   return (
     <div className="os">

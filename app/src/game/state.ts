@@ -2,7 +2,7 @@ import { SAVE_VERSION, STARTER_INCOME_PER_HOUR, STARTING_BALANCE } from "./balan
 import { STARTER_RIG } from "./catalog";
 import type { Rig } from "./rig";
 import { refillContracts } from "./contracts";
-import { CONTRACT_POOL } from "./balance";
+import { BAIL, CONTRACT_POOL } from "./balance";
 import type { Contract, DirNode, Host, Job, Legal, Order, Part, Session, Txn } from "./types";
 import { starterDrive } from "./vfs";
 
@@ -101,4 +101,9 @@ export function newGame(now = Date.now()): GameState {
 
 export function incomePerHour(g: GameState): number {
   return g.wallet.incomeSources.reduce((sum, s) => sum + s.perHour, 0);
+}
+
+/** Bail owed at a warrant (GDD 3.6.2): scales with level and data sold. */
+export function bailAmount(g: GameState): number {
+  return BAIL.base + g.player.level * BAIL.perLevel + g.soldHashes.length * BAIL.perHash;
 }

@@ -184,3 +184,48 @@ body.dragging iframe { pointer-events: none; }
 
 .app-crash { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; }
 .app-crash pre { margin: 0; white-space: pre-wrap; max-width: 560px; }
+
+/* Heat widget flyout */
+.tb-heat-wrap { position: relative; }
+.tb-heat { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; background: transparent; border: 0; border-radius: var(--r-control); }
+.tb-heat:hover { background: var(--subtle-hover); }
+.tb-heat-menu { right: 0; bottom: 48px; min-width: 220px; }
+.tb-heat-note { padding: 6px 12px 2px; }
+
+/* Risk screens: warrant + prison (GDD 3.6) */
+.legal-screen { position: fixed; inset: 0; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px; overflow-y: auto; }
+.legal-screen.warrant { background: radial-gradient(ellipse at top, #2a1416, #0c0608); }
+.legal-screen.prison { background: radial-gradient(ellipse at top, #10131c, #06070b); }
+.legal-card { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 32px; text-align: center; background: var(--bg-mica); border: 1px solid var(--stroke-surface); border-radius: var(--r-overlay); }
+.legal-badge { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 50%; background: var(--critical-bg); color: var(--critical); font-size: 28px; }
+.legal-title { font: 600 24px/30px var(--font); letter-spacing: 1px; }
+.legal-subtitle { font: 600 14px/20px var(--font); color: var(--critical); letter-spacing: 2px; }
+.legal-section { width: 100%; text-align: left; }
+.legal-charges { margin: 6px 0 0; padding-left: 20px; color: var(--text-secondary); font-size: 13px; line-height: 22px; }
+.legal-bail { display: flex; flex-direction: column; gap: 2px; margin: 8px 0; }
+.legal-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.legal-actions.row { flex-direction: row; }
+.legal-actions .btn { width: 100%; height: 40px; }
+
+.prison { justify-content: flex-start; }
+.prison-head { text-align: center; display: flex; flex-direction: column; gap: 6px; margin-top: 20px; }
+.prison-timer { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; }
+.prison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: min(720px, 100%); }
+.prison-option { display: flex; flex-direction: column; gap: 6px; padding: 20px; background: var(--bg-card); border: 1px solid var(--stroke-card); border-radius: var(--r-overlay); }
+.prison-option-action { margin-top: 10px; }
+
+.legal-modal-smoke { position: fixed; inset: 0; z-index: 20001; display: grid; place-items: center; background: var(--bg-smoke); }
+.legal-modal { width: min(440px, calc(100% - 32px)); display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; text-align: center; background: var(--bg-solid-tertiary); border: 1px solid var(--stroke-surface); border-radius: var(--r-overlay); }
+.legal-modal .btn { min-width: 120px; }
+.paperwork-sheet { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; background: var(--bg-card); border: 1px solid var(--stroke-card); border-radius: var(--r-control); transition: border-color .15s; }
+.paperwork-sheet.ok { border-color: var(--success); }
+.paperwork-sheet.bad { border-color: var(--critical); }
+.paperwork-stamp { padding: 2px 10px; border: 2px solid currentColor; border-radius: 4px; font: 700 12px/18px var(--font); letter-spacing: 1px; transform: rotate(-4deg); }
+.paperwork-stamp.classified { color: var(--critical); }
+.paperwork-stamp.public { color: var(--text-tertiary); }
+.jailbreak-seq { display: flex; gap: 10px; }
+.jailbreak-sym { width: 44px; height: 44px; display: grid; place-items: center; font-size: 22px; background: var(--term-bg); border: 1px solid var(--stroke-surface); border-radius: var(--r-control); color: var(--term-green); }
+.jailbreak-sym.filled { color: var(--accent); border-color: var(--accent); }
+.jailbreak-pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
+.jailbreak-key { height: 48px; font-size: 22px; background: var(--control-default); border: 1px solid var(--stroke-control); border-radius: var(--r-control); color: var(--text-primary); }
+.jailbreak-key:hover { background: var(--control-hover); }

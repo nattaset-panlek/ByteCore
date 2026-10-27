@@ -1,5 +1,21 @@
 import { create } from "zustand";
-import { CONTRACT_POOL, CRACK_XP, DATA_XP_DIVISOR, HEAT, HEAT_MAX, REPLACE_WEAR, SCAN_COUNT, TIER_UNLOCK_LEVEL, xpToNext } from "./balance";
+import {
+  CONTRACT_POOL,
+  CRACK_XP,
+  DATA_XP_DIVISOR,
+  DEBT_LIMIT,
+  HEAT,
+  HEAT_MAX,
+  PAPERWORK_PENALTY_MS,
+  PAPERWORK_REDUCTION_MS,
+  PRISON_BASE_MS,
+  REPLACE_WEAR,
+  SCAN_COUNT,
+  SCRUB_CHUNK,
+  SCRUB_COST_PER_POINT,
+  TIER_UNLOCK_LEVEL,
+  xpToNext,
+} from "./balance";
 import { getModel } from "./catalog";
 import { advanceContracts, refillContracts } from "./contracts";
 import { moduleBonus, moduleFile, moduleForTier, MODULE_SLOTS, MODULES } from "./modules";
@@ -8,7 +24,7 @@ import { crackChance, jobDone, jobDuration, jobLoad, type JobRequest } from "./j
 import { addTxn, tick } from "./loop";
 import { makeHost, scanTiers } from "./network";
 import { diskCapacityMB, resellPrice, rigStats } from "./rig";
-import { newGame, uid, type GameState } from "./state";
+import { bailAmount, newGame, uid, type GameState } from "./state";
 import { msg, type Msg, type TKey, type Vars } from "../i18n";
 import type { FileNode, Host, Job, JobKind, Part, Txn } from "./types";
 import * as vfs from "./vfs";
@@ -64,6 +80,20 @@ interface GameStore {
   loadModule: (path: string) => Result;
   unloadModule: (id: string) => void;
 
+  // Risk and consequences (GDD 3.6)
+  /** Careful play: spend credits to remove a chunk of Heat. */
+  scrubHeat: () => Result;
+  /** At a warrant: pay the bail in cash, or take it as debt. */
+  payBail: (useDebt: boolean) => Result;
+  /** Give up at a warrant and go to prison. */
+  surrender: () => void;
+  /** Prison paperwork sheet result: correct cuts the sentence, wrong adds a little. */
+  paperwork: (correct: boolean) => void;
+  /** One-shot jailbreak: success frees you, failure doubles the remaining sentence. */
+  attemptJailbreak: (success: boolean) => void;
+  /** Prison: wipe the record and start over. */
+  newIdentity: () => void;
+
   // Files (capacity checked against the installed storage)
   writeFile: (path: string, f: Omit<FileNode, "type" | "name" | "modified">) => Result;
   mkdir: (path: string) => Result;
@@ -91,6 +121,16 @@ export const useGame = create<GameStore>((set, get) => {
   };
 
   const hostAt = (ip: string): Host | undefined => get().game.net.hosts.find((h) => h.ip === ip);
+
+  /** Enter the warrant state when Heat hits the limit (mirrors the loop, for the addHeat path). */
+  const checkWarrant = () => {
+    const g = get().game;
+    if (g.heat >= HEAT_MAX && g.legal.state === "free") {
+      const bail = bailAmount(g);
+      patch({ legal: { state: "warrant", bail }, jobs: [], net: { ...g.net, session: null } });
+      emit({ type: "warrant", bail });
+    }
+  };
 
   /** Advance active contracts after an action; emit for any that just completed. */
   const bumpContracts = (goal: "crack" | "pull" | "sell", tier: number) => {
@@ -234,7 +274,7 @@ export const useGame = create<GameStore>((set, get) => {
       const r = tick(get().game, t);
       if (r.game !== get().game) set({ game: r.game });
       emitAll(r.events);
-      processJobs(t);
+      if (get().game.legal.state === "free") processJobs(t);
     },
 
     earn: (amount, label, kind, vars) => {
@@ -267,7 +307,7 @@ export const useGame = create<GameStore>((set, get) => {
       const net = amount > 0 ? amount * (1 - moduleBonus(get().game.modules).heat) : amount;
       const heat = Math.max(0, Math.min(HEAT_MAX, before + net));
       patch({ heat });
-      if (heat >= HEAT_MAX && before < HEAT_MAX) emit({ type: "heatMax" });
+      checkWarrant();
     },
 
     placeOrder: (modelIds) => {
@@ -444,6 +484,57 @@ export const useGame = create<GameStore>((set, get) => {
     },
 
     unloadModule: (id) => patch({ modules: get().game.modules.filter((m) => m !== id) }),
+
+    scrubHeat: () => {
+      const g = get().game;
+      if (g.heat <= 0) return fail("err.noHeat");
+      const amount = Math.min(SCRUB_CHUNK, Math.ceil(g.heat));
+      const paid = get().spend(amount * SCRUB_COST_PER_POINT, "txn.scrub", "proxy");
+      if (!paid.ok) return paid;
+      patch({ heat: Math.max(0, get().game.heat - amount) });
+      return OK;
+    },
+
+    payBail: (useDebt) => {
+      const g = get().game;
+      if (g.legal.state !== "warrant") return fail("err.noWarrant");
+      const bail = g.legal.bail;
+      if (useDebt) {
+        if (g.wallet.debt + bail > DEBT_LIMIT) return fail("err.debtLimit");
+        patch({ wallet: { ...g.wallet, debt: g.wallet.debt + bail }, txns: addTxn(g.txns, "txn.bailLoan", -bail, "bail", now()) });
+      } else {
+        const paid = get().spend(bail, "txn.bail", "bail");
+        if (!paid.ok) return paid;
+      }
+      patch({ legal: { state: "free" }, heat: 0 });
+      return OK;
+    },
+
+    surrender: () => {
+      if (get().game.legal.state !== "warrant") return;
+      patch({ legal: { state: "prison", until: now() + PRISON_BASE_MS, jailbreakUsed: false, jailbreakLocked: false }, heat: 0 });
+    },
+
+    paperwork: (correct) => {
+      const g = get().game;
+      if (g.legal.state !== "prison") return;
+      const delta = correct ? -PAPERWORK_REDUCTION_MS : PAPERWORK_PENALTY_MS;
+      patch({ legal: { ...g.legal, until: Math.max(now() + 1000, g.legal.until + delta) } });
+    },
+
+    attemptJailbreak: (success) => {
+      const g = get().game;
+      if (g.legal.state !== "prison" || g.legal.jailbreakUsed) return;
+      if (success) {
+        patch({ legal: { state: "free" }, heat: 0 });
+        get().addXp(50); // underground reputation (GDD 3.6.3)
+      } else {
+        const remaining = Math.max(0, g.legal.until - now());
+        patch({ legal: { ...g.legal, until: now() + remaining * 2, jailbreakUsed: true, jailbreakLocked: true } });
+      }
+    },
+
+    newIdentity: () => get().reset(),
 
     writeFile: (path, f) => applyFs(vfs.writeFile(get().game.fs, path, { ...f, modified: now() })),
     mkdir: (path) => applyFs(vfs.mkdir(get().game.fs, path)),

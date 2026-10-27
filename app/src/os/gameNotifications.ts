@@ -29,8 +29,8 @@ export function useGameNotifications() {
           case "levelUp":
             notify({ appId: "profile", title: t("event.levelUp.title"), message: t("event.levelUp.message", { level: e.level }) });
             break;
-          case "heatMax":
-            notify({ icon: "icon/warning", title: t("event.heatMax.title"), message: t("event.heatMax.message"), duration: 0 });
+          case "released":
+            notify({ icon: "icon/checkmark_circle", title: t("event.released.title"), message: t("event.released.message") });
             break;
           case "interestCharged":
             notify({ appId: "wallet", title: t("event.interest.title"), message: t("event.interest.message", { amount: fmt.credits(e.amount) }) });

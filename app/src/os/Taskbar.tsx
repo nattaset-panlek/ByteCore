@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { APPS, PINNED_APPS, appName, type AppId } from "./apps";
 import { activeWindow, useWindows } from "./windowStore";
 import { useShell } from "./shellStore";
@@ -6,6 +6,43 @@ import { Icon } from "../ui";
 import { useGame } from "../game/store";
 import { incomePerHour } from "../game/state";
 import { fmt, useT } from "../i18n";
+import { SCRUB_CHUNK, SCRUB_COST_PER_POINT } from "../game/balance";
+
+/** Heat meter with a flyout to scrub logs (careful play, GDD 3.6). */
+function HeatWidget({ heat, tone }: { heat: number; tone: string }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const scrubHeat = useGame((s) => s.scrubHeat);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", close);
+    return () => window.removeEventListener("pointerdown", close);
+  }, [open]);
+  const cost = Math.min(SCRUB_CHUNK, Math.ceil(heat * 100)) * SCRUB_COST_PER_POINT;
+  return (
+    <div className="tb-heat-wrap" ref={ref}>
+      <button type="button" className="tb-heat" title={t("taskbar.heat")} onClick={() => setOpen(!open)}>
+        <span className="t-caption c-secondary">{t("taskbar.heat")}</span>
+        <span className="tb-heat-track">
+          <span className="tb-heat-fill" style={{ width: `${heat * 100}%`, background: `var(--${tone})` }} />
+        </span>
+        <span className="t-caption">{Math.round(heat * 100)}%</span>
+      </button>
+      {open && (
+        <div className="menu-flyout tb-heat-menu">
+          <div className="t-caption c-secondary tb-heat-note">{t("taskbar.heatHint")}</div>
+          <button type="button" className="menu-item" disabled={heat <= 0} onClick={() => scrubHeat()}>
+            <Icon name="icon/arrow_clockwise" /> {t("taskbar.scrub", { amount: fmt.credits(cost) })}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function useClock() {
   const [now, setNow] = useState(() => new Date());
@@ -77,13 +114,8 @@ export function Taskbar() {
       </div>
 
       <div className="taskbar-right">
-        <div className="tb-heat" title={t("taskbar.heat")}>
-          <span className="t-caption c-secondary">{t("taskbar.heat")}</span>
-          <span className="tb-heat-track">
-            <span className="tb-heat-fill" style={{ width: `${heat * 100}%`, background: `var(--${heatTone})` }} />
-          </span>
-          <span className="t-caption">{Math.round(heat * 100)}%</span>
-        </div>
+        <HeatWidget heat={heat} tone={heatTone} />
+        <span />
         <button type="button" className="tb-tray-btn" aria-label={t("taskbar.hiddenIcons")}>
           <Icon name="icon/chevron_up" size={12} />
         </button>

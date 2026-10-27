@@ -9,5 +9,6 @@ import exchange from "./exchange";
 import contracts from "./contracts";
 import taskmgr from "./taskmgr";
 import modules from "./modules";
+import legal from "./legal";
 
-export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules } as const;
+export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal } as const;
