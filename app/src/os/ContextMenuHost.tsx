@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "../ui";
 import { useContextMenu } from "./contextMenu";
+import { stageSize } from "./stage";
 
 /** Renders the active context menu at the cursor, clamped to the viewport. */
 export function ContextMenu() {
@@ -11,10 +12,11 @@ export function ContextMenu() {
 
   useLayoutEffect(() => {
     if (!menu || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
+    const el = ref.current;
+    const { w, h } = stageSize();
     setPos({
-      x: Math.min(menu.x, window.innerWidth - r.width - 8),
-      y: Math.min(menu.y, window.innerHeight - r.height - 8),
+      x: Math.min(menu.x, w - el.offsetWidth - 8),
+      y: Math.min(menu.y, h - el.offsetHeight - 8),
     });
   }, [menu]);
 

@@ -1,5 +1,8 @@
 /* Xea OS shell: desktop, windows, taskbar, Start, toasts. */
 
+/* Fixed-resolution stage scaled to fit the real window (os/stage.tsx). */
+.stage-frame { position: fixed; inset: 0; overflow: hidden; background: #000; }
+.stage { position: absolute; overflow: hidden; transform-origin: 0 0; background: var(--desktop); }
 .os { position: fixed; inset: 0; overflow: hidden; background: var(--desktop); }
 body.dragging, body.dragging * { cursor: inherit; user-select: none; }
 body.dragging iframe { pointer-events: none; }

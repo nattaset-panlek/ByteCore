@@ -3,6 +3,7 @@ import { APPS, appName } from "./apps";
 import { TASKBAR_H, useWindows, type Rect, type WinState } from "./windowStore";
 import { Icon } from "../ui";
 import { openContextMenu, separator } from "./contextMenu";
+import { stageDelta, stageSize } from "./stage";
 import { t as translate, useT } from "../i18n";
 
 const MIN_W = 360;
@@ -26,7 +27,7 @@ export function useWindow(): WindowCtx {
 function track(e: RPointerEvent, onMove: (dx: number, dy: number) => void) {
   const sx = e.clientX;
   const sy = e.clientY;
-  const move = (ev: PointerEvent) => onMove(ev.clientX - sx, ev.clientY - sy);
+  const move = (ev: PointerEvent) => onMove(stageDelta(ev.clientX - sx), stageDelta(ev.clientY - sy));
   const up = () => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
@@ -51,7 +52,7 @@ export function Window({ win, children }: { win: WinState; children: ReactNode }
     if (win.maximized) return;
     const start = { x: win.x, y: win.y };
     track(e, (dx, dy) => {
-      const maxY = window.innerHeight - TASKBAR_H - 32;
+      const maxY = stageSize().h - TASKBAR_H - 32;
       setRect(win.id, { x: start.x + dx, y: Math.min(maxY, Math.max(0, start.y + dy)) });
     });
   };

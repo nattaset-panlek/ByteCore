@@ -79,3 +79,11 @@ Right-click works across the OS. Components call `openContextMenu(e, items)` fro
 - Any spot inside a window falls back to a window menu (Minimize, Maximize/Restore, Close)
 - App-specific menus: File Explorer (items and empty space), Terminal (New tab, Copy all output, Clear), Task Manager rows (Switch to, End task)
 - The browser's own menu is suppressed everywhere except text fields, which keep native copy/paste.
+
+## Fixed resolution — `os/stage.tsx`
+
+The game is not responsive. Xea OS always renders at one fixed resolution and the whole stage is scaled uniformly (`transform: scale`) to fit the real window, centered with black bars, so nothing reflows when the window is resized.
+
+- Settings → System → **Aspect ratio** (16:9, 16:10, 21:9, 4:3) and **Display resolution** (sizes for that ratio). Switching ratio picks its default size. Stored per device in `bytecore.settings` (default 16:9, 1920 × 1080).
+- Code inside the stage works in stage pixels: use `stageSize()` instead of `window.innerWidth/innerHeight`, `toStage(clientX, clientY)` for pointer positions and `stageDelta()` for drag distances. `position: fixed` overlays are contained by the stage because it is transformed.
+- When the resolution shrinks, open windows are clamped back on screen (`windowStore.ts`).

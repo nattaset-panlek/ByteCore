@@ -3,6 +3,7 @@ import { startGame } from "./game/save";
 import { useGame } from "./game/store";
 import { applySettings, useSettings } from "./os/settingsStore";
 import { playSound } from "./os/sound";
+import { Stage } from "./os/stage";
 import { BootScreen } from "./screens/BootScreen";
 import { SignInScreen } from "./screens/SignInScreen";
 import { DesktopScreen } from "./screens/DesktopScreen";
@@ -40,7 +41,15 @@ export default function App() {
     };
   }, []);
 
-  if (phase === "boot" || !loaded) return <BootScreen onDone={() => setPhase((p) => (p === "boot" ? "signin" : p))} />;
-  if (phase === "signin") return <SignInScreen onSignIn={() => setPhase("desktop")} />;
-  return <DesktopScreen />;
+  return (
+    <Stage>
+      {phase === "boot" || !loaded ? (
+        <BootScreen onDone={() => setPhase((p) => (p === "boot" ? "signin" : p))} />
+      ) : phase === "signin" ? (
+        <SignInScreen onSignIn={() => setPhase("desktop")} />
+      ) : (
+        <DesktopScreen />
+      )}
+    </Stage>
+  );
 }

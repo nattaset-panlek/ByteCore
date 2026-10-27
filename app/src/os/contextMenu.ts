@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toStage } from "./stage";
 import type { MouseEvent as RMouseEvent } from "react";
 
 // A shared right-click context menu (Xea OS). Any component builds an item list and calls openContextMenu.
@@ -31,5 +32,7 @@ export function openContextMenu(e: RMouseEvent, items: MenuItem[]) {
   e.preventDefault();
   e.stopPropagation();
   const usable = items.filter(Boolean);
-  if (usable.length) useContextMenu.getState().show(e.clientX, e.clientY, usable);
+  if (!usable.length) return;
+  const p = toStage(e.clientX, e.clientY);
+  useContextMenu.getState().show(p.x, p.y, usable);
 }

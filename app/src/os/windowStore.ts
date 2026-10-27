@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { APPS, type AppId } from "./apps";
+import { stageSize, useStage } from "./stage";
 
 export const TASKBAR_H = 48;
 
@@ -59,8 +60,8 @@ export const useWindows = create<WindowStore>((set, get) => ({
       return existing.id;
     }
     const n = get().windows.length;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight - TASKBAR_H;
+    const { w: vw, h: sh } = stageSize();
+    const vh = sh - TASKBAR_H;
     const w = Math.min(app.size[0], vw - 40);
     const h = Math.min(app.size[1], vh - 40);
     const offset = (n % 6) * 28;
@@ -126,3 +127,16 @@ export const useWindows = create<WindowStore>((set, get) => ({
     else get().focus(top.id);
   },
 }));
+
+// Keep windows on screen when the player picks a smaller resolution.
+useStage.subscribe((st, prev) => {
+  if (st.w === prev.w && st.h === prev.h) return;
+  const maxH = st.h - TASKBAR_H;
+  useWindows.setState((s) => ({
+    windows: s.windows.map((win) => {
+      const w = Math.min(win.w, st.w);
+      const h = Math.min(win.h, maxH);
+      return { ...win, w, h, x: Math.max(0, Math.min(win.x, st.w - w)), y: Math.max(0, Math.min(win.y, maxH - h)) };
+    }),
+  }));
+});

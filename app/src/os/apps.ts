@@ -46,7 +46,7 @@ export const APPS: Record<AppId, AppDef> = {
   profile: def("profile", "Profile", "app/Profile", [960, 660]),
   settings: def("settings", "Settings", "app/Settings", [1100, 720], "custom"),
   scriptEditor: def("scriptEditor", "Script Editor", "icon/document", [1100, 720]),
-  contracts: def("contracts", "Contracts", "app/Contracts", [1000, 660]),
+  contracts: def("contracts", "Contracts", "app/Contracts", [1000, 660], "custom"),
   chimeraKit: def("chimeraKit", "Chimera Kit", "app/ChimeraKit", [1000, 660]),
 };
 

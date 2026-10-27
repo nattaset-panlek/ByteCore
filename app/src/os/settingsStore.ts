@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Aspect } from "./stage";
 
 // Personalization settings (GDD 5.1). Kept in localStorage so they persist across new identities,
 // like the language. Game progress stats live in the save; these are per-device preferences.
@@ -17,10 +18,13 @@ interface Settings {
   reduceMotion: boolean;
   sound: boolean;
   tutorialSeen: boolean;
+  /** Fixed render resolution ("WxH"); the stage scales it to fit the real window. */
+  aspect: Aspect;
+  resolution: string;
 }
 
 const KEY = "bytecore.settings";
-const DEFAULTS: Settings = { accent: "blue", reduceMotion: false, sound: true, tutorialSeen: false };
+const DEFAULTS: Settings = { accent: "blue", reduceMotion: false, sound: true, tutorialSeen: false, aspect: "16:9", resolution: "1920x1080" };
 
 function load(): Settings {
   try {

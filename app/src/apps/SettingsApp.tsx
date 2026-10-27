@@ -3,6 +3,7 @@ import { SettingsLayout, TitleBar } from "../os/Window";
 import { resetGame } from "../game/save";
 import { useWindows } from "../os/windowStore";
 import { ACCENTS, useSettings, type AccentId } from "../os/settingsStore";
+import { DEFAULT_RESOLUTION, RESOLUTIONS, type Aspect } from "../os/stage";
 import { Button, ComboBox, ContentDialog, InfoBar, NavigationViewItem, SettingsCard, TextBox, ToggleSwitch } from "../ui";
 import { LOCALES, useI18n, useT, type Locale } from "../i18n";
 
@@ -102,6 +103,25 @@ export function SettingsApp() {
 
         {page === "system" && (
           <>
+            <SettingsCard icon="icon/desktop" title={t("settings.aspect")} description={t("settings.aspectDesc")}>
+              <ComboBox
+                value={settings.aspect}
+                onChange={(v: Aspect) => {
+                  settings.set("aspect", v);
+                  settings.set("resolution", DEFAULT_RESOLUTION[v]);
+                }}
+                width={180}
+                options={(Object.keys(RESOLUTIONS) as Aspect[]).map((a) => ({ value: a, label: a }))}
+              />
+            </SettingsCard>
+            <SettingsCard icon="icon/desktop" title={t("settings.resolution")} description={t("settings.resolutionDesc")}>
+              <ComboBox
+                value={settings.resolution}
+                onChange={(v) => settings.set("resolution", v)}
+                width={180}
+                options={(RESOLUTIONS[settings.aspect] ?? RESOLUTIONS["16:9"]).map((r) => ({ value: r, label: r.replace("x", " × ") }))}
+              />
+            </SettingsCard>
             <SettingsCard icon="icon/speaker_2" title={t("settings.sound")} description={t("settings.soundDesc")}>
               <ToggleSwitch checked={settings.sound} onChange={(v) => settings.set("sound", v)} />
             </SettingsCard>
