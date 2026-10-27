@@ -28,7 +28,7 @@ flowchart TD
     Exfiltrate --> ManageFiles["4. File System & Inventory\n(Organize in File Explorer, inspect with .exe)"]
     ManageFiles --> Sell["5. Data Laundering / Broker\n(Batch Upload to Darknet Market for Crypto)"]
     ManageFiles --> Automation["6. Scripting & Tooling\n(Write JS Bots in IDE / Sync External Code)"]
-    Sell --> Upgrade["7. Hardware & Tool Upgrade\n(Buy better CPU, RAM, Uplink, .dll modules)"]
+    Sell --> Upgrade["7. Hardware & Tool Upgrade\n(Order parts in Browser Market → wait for delivery → Install / Replace)"]
     Upgrade --> Scan
     
     Exfiltrate -.->|Traced / Failed Countermeasure| Police["🚨 Police Raid & Heat Limit"]
@@ -246,6 +246,37 @@ stateDiagram-v2
 
 ---
 
+### 3.7 Hardware Procurement: สั่งซื้อ → รอส่ง → ติดตั้ง (Rig & Gear Upgrade)
+
+การอัปเกรด Rig หรือ Gear **ไม่มีปุ่มกดจ่ายเงินแล้วอัปเกรดทันที** ทุกชิ้นต้องสั่งซื้อและรอของมาส่งก่อน
+
+```mermaid
+flowchart LR
+    Browse["Browser (Core html)\nMarket / Shop app"] --> Order["สั่งซื้อ + จ่ายเงินจาก Wallet"]
+    Order --> Transit["กำลังจัดส่ง\n(Delivery timer / ETA)"]
+    Transit --> Arrived["ของมาถึง\n→ Notification / Toast"]
+    Arrived --> Rig["Rig Manager"]
+    Rig -->|ช่องว่าง ไม่เคยมีชิ้นนี้| Install["Install"]
+    Rig -->|มีชิ้นเดิมอยู่แล้ว| Replace["Replace"]
+    Replace --> Stock["ชิ้นเดิมเข้า Rig Stock"]
+    Stock --> Reuse["เก็บไว้ใช้ / ใส่กลับ"]
+    Stock --> Resell["ขายมือสอง (ราคาลดลง)"]
+```
+
+1. **Browser / Core html:** แอป Browser ในเกมเป็นแค่หน้าเว็บจำลอง (Core html) สำหรับ Market, ร้านค้าฮาร์ดแวร์ และแอปออนไลน์อื่นๆ ไม่ได้เชื่อมต่ออินเทอร์เน็ตจริง การซื้อ Rig/Gear ทั้งหมดเริ่มจากหน้าร้านในนี้
+   * หน้าเว็บร้านค้าหน้าตาเหมือนเว็บขายคอมพิวเตอร์ทั่วไป (ธีมสว่างตามแบรนด์ร้าน ไม่ใช่สไตล์ของ OS): หัวเว็บมีช่องค้นหาและตะกร้า, แถบหมวดหมู่, การ์ดสินค้าพร้อมราคา ส่วนลด Rarity และเวลาจัดส่ง
+   * **PC Builder:** เลือกชิ้นส่วนทีละช่อง (Processor, Memory, Network card, Storage) ดูราคารวมและเวลาจัดส่งในกล่อง Summary แล้วกด Place order
+   * **My orders:** รายการสั่งซื้อพร้อมตัวติดตามสถานะ Ordered → Packed → On the way → Delivered ของที่ส่งถึงแล้วมีปุ่มไปติดตั้งใน Rig Manager ของที่ยังไม่ส่งยกเลิกได้
+2. **สั่งซื้อ (Order):** เลือกสินค้า จ่ายเงินจาก Wallet ได้ Order พร้อมสถานะและเวลาจัดส่ง (ETA) ดูได้จาก Wallet (รายการธุรกรรม) และ Rig Manager (Deliveries)
+3. **รอส่ง (Delivery):** นับเวลาจริงตาม ETA ระหว่างนี้ชิ้นส่วนยังใช้งานไม่ได้
+4. **แจ้งเตือน (Notification):** เมื่อของมาถึง ระบบส่ง Toast และเพิ่มรายการใน Notification Center คลิกแล้วเปิด Rig Manager ที่ชิ้นนั้น
+5. **ติดตั้ง:**
+   * **Install:** ใช้เมื่อช่อง (slot) นั้นยังว่าง / ไม่เคยมีชิ้นส่วนประเภทนี้
+   * **Replace:** ใช้เมื่อมีชิ้นเดิมติดตั้งอยู่แล้ว (อัปเกรดหรือเปลี่ยนชิ้น) ชิ้นใหม่เข้าไปแทน
+6. **Rig Stock (แอปคลังชิ้นส่วน):** ชิ้นที่ถูก Replace ออกมาจะไปอยู่ในแอป Rig Stock ผู้เล่นเลือกได้ว่าจะเก็บไว้ใช้ต่อ (ใส่กลับ / ใช้กับ Rig อื่น) หรือขายมือสองในราคาที่ต่ำกว่าราคาใหม่
+
+---
+
 ## 4. In-Game Economy & Progression Table
 
 | Tier | ชื่อระดับ / Title | อุปกรณ์ฮาร์ดแวร์หลัก | เครื่องมือ & สคริปต์ที่ปลดล็อก | ตลาดมืดที่เข้าถึงได้ |
@@ -260,7 +291,7 @@ stateDiagram-v2
 ## 5. User Experience & UI/UX Integration
 
 ### 5.1 Desktop & Window Architecture (Xea OS Layout)
-* **Desktop Workspace:** วาง Shortcut ของแอปพลิเคชัน (Terminal, File Explorer, IDE, Darknet Market, Rig Monitor)
+* **Desktop Workspace:** วาง Shortcut ของแอปพลิเคชัน (Terminal, File Explorer, IDE, Browser (Core html: Market / ร้านค้า), Rig Manager, Rig Stock, Wallet)
 * **Status Taskbar (Bottom Bar):**
   * ปุ่ม Start Menu: เข้าถึงแอปและคำสั่ง Shutdown / Restart
   * Task Buttons: ยุบ/ขยายหน้าต่างแบบ Windows 11

@@ -17,3 +17,6 @@ yarn-error.log*
 .env.local
 .DS_Store
 Thumbs.db
+
+# Figma build screenshots (local review only)
+tools/figma-build/shots/
