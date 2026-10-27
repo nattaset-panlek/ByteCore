@@ -1,6 +1,7 @@
 import { APP_COMPONENTS } from "../apps";
 import { Desktop } from "../os/Desktop";
 import { useGameNotifications } from "../os/gameNotifications";
+import { useTutorial } from "../os/useTutorial";
 import { StartMenu } from "../os/StartMenu";
 import { Taskbar } from "../os/Taskbar";
 import { ToastStack } from "../os/ToastStack";
@@ -19,6 +20,7 @@ export function DesktopScreen() {
   const { poweredOff, powerOn } = useShell();
   const legal = useGame((s) => s.game.legal);
   useGameNotifications();
+  useTutorial();
 
   if (poweredOff) {
     return (

@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import type { AppId } from "../os/apps";
-import { PlaceholderBody } from "./Placeholder";
 import { SettingsApp } from "./SettingsApp";
 import { Browser } from "./browser/Browser";
 import { Terminal } from "./terminal/Terminal";
@@ -8,6 +7,7 @@ import { ChimeraKit } from "./ChimeraKit";
 import { Contracts } from "./Contracts";
 import { TaskManager } from "./TaskManager";
 import { ScriptEditor } from "./scriptEditor/ScriptEditor";
+import { Profile } from "./Profile";
 import { FileExplorer } from "./FileExplorer";
 import { RigManager } from "./RigManager";
 import { RigStock } from "./RigStock";
@@ -24,7 +24,7 @@ export const APP_COMPONENTS: Record<AppId, ComponentType> = {
   rigStock: RigStock,
   wallet: Wallet,
   taskManager: TaskManager,
-  profile: PlaceholderBody,
+  profile: Profile,
   settings: SettingsApp,
   scriptEditor: ScriptEditor,
   contracts: Contracts,

@@ -127,9 +127,14 @@ export const useGame = create<GameStore>((set, get) => {
     const g = get().game;
     if (g.heat >= HEAT_MAX && g.legal.state === "free") {
       const bail = bailAmount(g);
-      patch({ legal: { state: "warrant", bail }, jobs: [], net: { ...g.net, session: null } });
+      patch({ legal: { state: "warrant", bail }, jobs: [], net: { ...g.net, session: null }, player: { ...g.player, stats: { ...g.player.stats, arrests: g.player.stats.arrests + 1 } } });
       emit({ type: "warrant", bail });
     }
+  };
+
+  const bumpStat = (key: "cracks" | "pulls" | "dataSold" | "contracts" | "arrests", n = 1) => {
+    const p = get().game.player;
+    patch({ player: { ...p, stats: { ...p.stats, [key]: p.stats[key] + n } } });
   };
 
   /** Advance active contracts after an action; emit for any that just completed. */
@@ -205,6 +210,7 @@ export const useGame = create<GameStore>((set, get) => {
       if (ok) {
         patch({ net: { ...g.net, hosts: g.net.hosts.map((h) => (h.ip === job.target ? { ...h, cracked: true } : h)) } });
         get().addXp(CRACK_XP * host.tier);
+        bumpStat("cracks");
         bumpContracts("crack", host.tier);
         // A recovered module may drop from Tier 2+ targets.
         if (host.tier >= 2 && Math.random() < 0.3) {
@@ -239,6 +245,7 @@ export const useGame = create<GameStore>((set, get) => {
         return;
       }
       get().addHeat(HEAT.perPull);
+      bumpStat("pulls");
       bumpContracts("pull", host.tier);
       emit({ type: "jobComplete", job, outcome: { ...outcomeBase, ok: true, dest: `${destDir}/${name}`, size: node.size } });
     }
@@ -306,7 +313,8 @@ export const useGame = create<GameStore>((set, get) => {
       const before = get().game.heat;
       const net = amount > 0 ? amount * (1 - moduleBonus(get().game.modules).heat) : amount;
       const heat = Math.max(0, Math.min(HEAT_MAX, before + net));
-      patch({ heat });
+      const p = get().game.player;
+      patch({ heat, player: { ...p, stats: { ...p.stats, peakHeat: Math.max(p.stats.peakHeat, Math.round(heat)) } } });
       checkWarrant();
     },
 
@@ -450,6 +458,7 @@ export const useGame = create<GameStore>((set, get) => {
       patch({ soldHashes: [...sold] });
       get().earn(earned, "txn.dataSale", "sale", { count: soldTiers.length });
       get().addXp(xp);
+      bumpStat("dataSold", soldTiers.length);
       for (const tier of soldTiers) bumpContracts("sell", tier);
       return OK;
     },
@@ -470,6 +479,7 @@ export const useGame = create<GameStore>((set, get) => {
       patch({ contracts: refillContracts(remaining, g.player.level, CONTRACT_POOL) });
       get().earn(c.reward.credits, "txn.contract", "sale", { tier: c.tier });
       get().addXp(c.reward.xp);
+      bumpStat("contracts");
       return OK;
     },
 

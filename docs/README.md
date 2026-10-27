@@ -15,5 +15,6 @@ Figma conventions in [`tools/figma-build/STYLE_NOTES.md`](../tools/figma-build/S
 | [i18n.md](i18n.md) | Localization: t(), fmt, dictionaries, adding a language |
 | [risk.md](risk.md) | Phase 5: Heat, warrant, bail/debt, prison, paperwork and jailbreak mini-games |
 | [scripting.md](scripting.md) | Phase 6: Script Editor, the Web Worker runtime and the ByteCore scripting API |
+| [progression.md](progression.md) | Phase 7: character/progression data, levels & unlocks, Profile, Settings, tutorial, balance |
 
 Keep these docs up to date when a system changes.

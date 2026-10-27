@@ -180,17 +180,67 @@ export function copyName(parent: DirNode, name: string): string {
   return candidate;
 }
 
-/** Starting drive for a new game. Neutral placeholder content. */
+const README = `Welcome to Xea OS.
+
+You are ghost_user, a freelance operator working out of a rented rig.
+The money is in data: find a target, break in, take what sells.
+
+Quick start:
+  1. Contracts  - pick a job with a clear goal and reward.
+  2. Terminal   - 'scan' for targets, then 'probe', 'crack', 'connect'.
+  3. 'pull' the files you find to C:/loot before the trace catches up.
+  4. Core Exchange (in Browser) - sell the data for credits and XP.
+  5. Browser market - order better parts; a faster rig means faster jobs.
+
+Watch your Heat. Push too hard and the Federal Cyber Division comes knocking.`;
+
+const GETTING_STARTED = `GETTING STARTED
+===============
+
+RECON
+  scan              find targets on the network
+  probe <addr>      reveal a target's security and open ports
+  crack <addr>      break in (needs CPU; may fail and raise Heat)
+
+ACCESS
+  connect <addr>    open a remote session
+  ls / cat / cd     look around the target
+  pull <path>       copy a file to your rig (watch the trace!)
+  disconnect        leave cleanly
+
+MONEY
+  Sell pulled data on Core Exchange. Each file sells once.
+  Spend credits in the market on CPU, memory, network and storage.
+
+AUTOMATION
+  Script Editor runs JavaScript with the ByteCore API. Automate the
+  whole loop once you are comfortable doing it by hand.`;
+
+const INTRO_MSG = `>> encrypted message <<
+From: CHIMERA
+To:   ghost_user
+
+You bought the Chimera Kit, so you already know the rules.
+Start small. Local forums, soft targets, nothing with teeth.
+When you can afford a real processor, we'll talk about the Syndicate.
+
+Burn this after reading. (You won't. Nobody does.)`;
+
+/** Starting drive for a new game: tutorial and lore files plus the working folders. */
 export function starterDrive(): DirNode {
   return dir("C:", [
     dir("Users", [
       dir("ghost_user", [
         dir("Desktop"),
-        dir("Documents", [file("readme.txt", 0.01, "Welcome to Xea OS.\nPlaceholder text for the first-run readme.")]),
+        dir("Documents", [
+          file("readme.txt", 0.01, README),
+          file("getting-started.txt", 0.01, GETTING_STARTED),
+          file("message-from-chimera.txt", 0.01, INTRO_MSG),
+        ]),
         dir("Downloads"),
       ]),
     ]),
-    dir("Scripts"),
+    dir("Scripts", [file("example.js", 0.01, "// Open this in Script Editor and press Run.\nconst me = await ByteCore.player();\nByteCore.logger.info('Logged in as ' + me.level + ' / balance ' + me.balance);\n")]),
     dir("tools"),
     dir("loot"),
     dir("Xea", [dir("System", [file("kernel.dat", 1200), file("shell.exe", 340), file("theme.css", 0.02, ":root {}")])]),

@@ -89,4 +89,11 @@ export default {
   "ui.rarity.Legendary": "Legendary",
   "taskbar.heatHint": "Heat draws attention. Scrub logs to cool down.",
   "taskbar.scrub": "Scrub logs ({amount})",
+  "settings.accent": "Accent color",
+  "settings.accentDesc": "Pick the highlight color for Xea OS.",
+  "settings.reduceMotion": "Reduce motion",
+  "settings.reduceMotionDesc": "Minimize window and toast animations.",
+  "settings.sound": "Sound effects",
+  "settings.soundDesc": "Clicks and notifications (audio arrives in a later update).",
+  "settings.comingSoon": "These settings are not available yet.",
 } as const;

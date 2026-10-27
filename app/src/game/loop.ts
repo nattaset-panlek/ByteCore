@@ -118,6 +118,10 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
     events.push({ type: "warrant", bail });
   }
 
+  const peakHeat = Math.max(g.player.stats.peakHeat, Math.round(heat));
+  const arrests = legal.state === "warrant" && g.legal.state === "free" ? g.player.stats.arrests + 1 : g.player.stats.arrests;
+  const player =
+    peakHeat === g.player.stats.peakHeat && arrests === g.player.stats.arrests ? g.player : { ...g.player, stats: { ...g.player.stats, peakHeat, arrests } };
   const net = session === g.net.session ? g.net : { ...g.net, session };
-  return { game: { ...g, lastTick: now, wallet, txns, heat, orders, net, legal, jobs }, events };
+  return { game: { ...g, lastTick: now, wallet, txns, heat, orders, net, legal, jobs, player }, events };
 }

@@ -18,7 +18,8 @@ export interface GameState {
   createdAt: number;
   /** Time of the last processed tick (drives offline progress) */
   lastTick: number;
-  player: { name: string; level: number; xp: number };
+  /** Character and progression — one cohesive block so saves and resets are clean. */
+  player: Player;
   wallet: {
     balance: number;
     debt: number;
@@ -59,6 +60,25 @@ export interface GameState {
   modules: string[];
 }
 
+/** The player's character and progression (GDD 4). Grouped so it saves and resets as a unit. */
+export interface Player {
+  name: string;
+  level: number;
+  xp: number;
+  /** Lifetime counters for the Profile app */
+  stats: GameStats;
+}
+
+export interface GameStats {
+  cracks: number;
+  pulls: number;
+  dataSold: number;
+  contracts: number;
+  arrests: number;
+  /** Highest Heat reached */
+  peakHeat: number;
+}
+
 export function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -69,7 +89,7 @@ export function newGame(now = Date.now()): GameState {
     version: SAVE_VERSION,
     createdAt: now,
     lastTick: now,
-    player: { name: "ghost_user", level: 1, xp: 0 },
+    player: { name: "ghost_user", level: 1, xp: 0, stats: { cracks: 0, pulls: 0, dataSold: 0, contracts: 0, arrests: 0, peakHeat: 0 } },
     wallet: {
       balance: STARTING_BALANCE,
       debt: 0,

@@ -56,6 +56,8 @@ export default {
   "event.delivered.message": "{name} has arrived. Install it from Rig Manager.",
   "event.levelUp.title": "Level up",
   "event.levelUp.message": "You reached level {level}.",
+  "event.unlock.title": "New tier unlocked",
+  "event.unlock.message": "Tier {tier} targets and parts are now available.",
   "event.released.title": "Released",
   "event.released.message": "Your sentence is served. Back to the underground.",
   "event.interest.title": "Debt interest charged",

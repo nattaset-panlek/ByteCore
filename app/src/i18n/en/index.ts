@@ -11,5 +11,7 @@ import taskmgr from "./taskmgr";
 import modules from "./modules";
 import legal from "./legal";
 import scripteditor from "./scripteditor";
+import profile from "./profile";
+import tutorial from "./tutorial";
 
-export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor } as const;
+export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...profile, ...tutorial } as const;

@@ -7,6 +7,9 @@ import { useGame } from "../game/store";
 import { appName } from "./apps";
 import { fmt, t } from "../i18n";
 
+/** Level that unlocks each tier (mirrors TIER_UNLOCK_LEVEL). */
+const UNLOCK_AT: Record<number, number> = { 3: 2, 6: 3, 10: 4 };
+
 /** Turn game events into toasts. */
 export function useGameNotifications() {
   useEffect(
@@ -26,9 +29,19 @@ export function useGameNotifications() {
               duration: 0,
             });
             break;
-          case "levelUp":
+          case "levelUp": {
             notify({ appId: "profile", title: t("event.levelUp.title"), message: t("event.levelUp.message", { level: e.level }) });
+            const tier = UNLOCK_AT[e.level];
+            if (tier)
+              notify({
+                appId: "browser",
+                title: t("event.unlock.title"),
+                message: t("event.unlock.message", { tier }),
+                actions: [{ label: t("toast.openApp", { app: appName("contracts") }), onClick: () => open("contracts") }, { label: t("toast.dismiss") }],
+                duration: 0,
+              });
             break;
+          }
           case "released":
             notify({ icon: "icon/checkmark_circle", title: t("event.released.title"), message: t("event.released.message") });
             break;

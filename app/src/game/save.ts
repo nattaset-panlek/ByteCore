@@ -50,7 +50,14 @@ export function deleteSave(): Promise<unknown> {
 function migrate(g: GameState): GameState {
   if (g.version === SAVE_VERSION) return g;
   const base = newGame(g.createdAt);
-  return { ...base, ...g, wallet: { ...base.wallet, ...g.wallet }, version: SAVE_VERSION };
+  return {
+    ...base,
+    ...g,
+    wallet: { ...base.wallet, ...g.wallet },
+    // older saves have no player.stats; keep the rest of the player and fill in defaults
+    player: { ...base.player, ...g.player, stats: { ...base.player.stats, ...g.player?.stats } },
+    version: SAVE_VERSION,
+  };
 }
 
 let started = false;

@@ -2,32 +2,30 @@ import { useState } from "react";
 import { SettingsLayout, TitleBar } from "../os/Window";
 import { resetGame } from "../game/save";
 import { useWindows } from "../os/windowStore";
-import { Button, CheckBox, ComboBox, ContentDialog, NavigationViewItem, SettingsCard, TextBox, ToggleSwitch } from "../ui";
+import { ACCENTS, useSettings, type AccentId } from "../os/settingsStore";
+import { Button, ComboBox, ContentDialog, InfoBar, NavigationViewItem, SettingsCard, TextBox, ToggleSwitch } from "../ui";
 import { LOCALES, useI18n, useT, type Locale } from "../i18n";
 
 const PAGES = [
   { id: "home", label: "settings.page.home", icon: "icon/home" },
   { id: "system", label: "settings.page.system", icon: "icon/desktop" },
-  { id: "rig", label: "settings.page.rig", icon: "icon/developer_board" },
-  { id: "network", label: "settings.page.network", icon: "icon/wifi_1" },
   { id: "personalization", label: "settings.page.personalization", icon: "icon/paint_brush" },
+  { id: "network", label: "settings.page.network", icon: "icon/wifi_1" },
   { id: "apps", label: "settings.page.apps", icon: "icon/grid" },
   { id: "privacy", label: "settings.page.privacy", icon: "icon/lock_closed" },
 ] as const;
 
 type PageId = (typeof PAGES)[number]["id"];
 
-/** Settings placeholder: shows the Settings layout with placeholder rows. Real settings come in Phase 7. */
+/** Settings (GDD 5.1): language, theme accent, motion and sound; New game. */
 export function SettingsApp() {
   const t = useT();
   const locale = useI18n((s) => s.locale);
   const setLocale = useI18n((s) => s.setLocale);
+  const settings = useSettings();
   const [page, setPage] = useState<PageId>("home");
   const [history, setHistory] = useState<PageId[]>([]);
   const [find, setFind] = useState("");
-  const [toggle, setToggle] = useState(true);
-  const [check, setCheck] = useState(false);
-  const [mode, setMode] = useState<"dark" | "light">("dark");
   const [confirmReset, setConfirmReset] = useState(false);
 
   const go = (id: PageId) => {
@@ -43,6 +41,22 @@ export function SettingsApp() {
     : undefined;
 
   const current = PAGES.find((p) => p.id === page)!;
+
+  const languageCard = (
+    <SettingsCard icon="icon/globe" title={t("settings.language")} description={t("settings.languageDesc")}>
+      <ComboBox value={locale} onChange={setLocale} options={(Object.keys(LOCALES) as Locale[]).map((l) => ({ value: l, label: LOCALES[l].label }))} />
+    </SettingsCard>
+  );
+  const accentCard = (
+    <SettingsCard icon="icon/color" title={t("settings.accent")} description={t("settings.accentDesc")}>
+      <ComboBox
+        value={settings.accent}
+        onChange={(v) => settings.set("accent", v)}
+        width={180}
+        options={(Object.keys(ACCENTS) as AccentId[]).map((a) => ({ value: a, label: ACCENTS[a].label }))}
+      />
+    </SettingsCard>
+  );
 
   return (
     <>
@@ -68,19 +82,39 @@ export function SettingsApp() {
         }
       >
         {page === "home" && (
-          <SettingsCard icon="icon/globe" title={t("settings.language")} description={t("settings.languageDesc")}>
-            <ComboBox
-              value={locale}
-              onChange={setLocale}
-              options={(Object.keys(LOCALES) as Locale[]).map((l) => ({ value: l, label: LOCALES[l].label }))}
-            />
-          </SettingsCard>
+          <>
+            {languageCard}
+            {accentCard}
+            <SettingsCard icon="icon/paint_brush" title={t("settings.page.personalization")} onClick={() => go("personalization")} />
+            <SettingsCard icon="icon/desktop" title={t("settings.page.system")} onClick={() => go("system")} />
+          </>
         )}
+
+        {page === "personalization" && (
+          <>
+            {accentCard}
+            <SettingsCard icon="icon/arrow_clockwise" title={t("settings.reduceMotion")} description={t("settings.reduceMotionDesc")}>
+              <ToggleSwitch checked={settings.reduceMotion} onChange={(v) => settings.set("reduceMotion", v)} />
+            </SettingsCard>
+            {languageCard}
+          </>
+        )}
+
         {page === "system" && (
-          <SettingsCard icon="icon/arrow_clockwise" title={t("settings.newGame")} description={t("settings.newGameDesc")}>
-            <Button onClick={() => setConfirmReset(true)}>{t("settings.reset")}</Button>
-          </SettingsCard>
+          <>
+            <SettingsCard icon="icon/speaker_2" title={t("settings.sound")} description={t("settings.soundDesc")}>
+              <ToggleSwitch checked={settings.sound} onChange={(v) => settings.set("sound", v)} />
+            </SettingsCard>
+            <SettingsCard icon="icon/arrow_clockwise" title={t("settings.newGame")} description={t("settings.newGameDesc")}>
+              <Button onClick={() => setConfirmReset(true)}>{t("settings.reset")}</Button>
+            </SettingsCard>
+          </>
         )}
+
+        {(page === "network" || page === "apps" || page === "privacy") && (
+          <InfoBar severity="info" title={t(current.label)} message={t("settings.comingSoon")} />
+        )}
+
         <ContentDialog
           open={confirmReset}
           title={t("settings.resetConfirmTitle")}
@@ -94,23 +128,6 @@ export function SettingsApp() {
         >
           {t("settings.resetConfirmText")}
         </ContentDialog>
-        <SettingsCard icon="icon/settings" title={t("settings.placeholderSetting")} description={t("settings.placeholderDesc")}>
-          <ToggleSwitch checked={toggle} onChange={setToggle} />
-        </SettingsCard>
-        <SettingsCard icon="icon/color" title={t("settings.colorMode")} description={t("settings.placeholderOption")}>
-          <ComboBox
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: "dark", label: t("settings.dark") },
-              { value: "light", label: t("settings.light") },
-            ]}
-          />
-        </SettingsCard>
-        <SettingsCard icon="icon/info" title={t("settings.anotherSetting")}>
-          <CheckBox checked={check} onChange={setCheck} label={t("settings.enabled")} />
-        </SettingsCard>
-        <SettingsCard icon="icon/folder" title={t("settings.openSubPage")} description={t("settings.placeholderLink")} onClick={() => go("system")} />
       </SettingsLayout>
     </>
   );
