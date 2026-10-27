@@ -1,0 +1,20 @@
+// Contracts app (GDD 4).
+export default {
+  "contracts.available": "Available",
+  "contracts.active": "In progress",
+  "contracts.completed": "Ready to claim",
+  "contracts.empty.available": "No contracts available. Level up to unlock more.",
+  "contracts.empty.active": "No contracts in progress. Accept one to start.",
+  "contracts.reward": "Reward",
+  "contracts.tier": "Tier {tier}+",
+  "contracts.accept": "Accept",
+  "contracts.claim": "Claim",
+  "contracts.progress": "{progress} / {need}",
+  "contracts.goal.crack": "Crack {need} Tier {tier}+ targets",
+  "contracts.goal.pull": "Pull {need} files from Tier {tier}+ targets",
+  "contracts.goal.sell": "Sell {need} Tier {tier}+ data files",
+  "contracts.statHeader": "Contracts",
+  "contracts.stat.active": "In progress",
+  "contracts.stat.ready": "Ready to claim",
+  "contracts.stat.available": "Available",
+} as const;

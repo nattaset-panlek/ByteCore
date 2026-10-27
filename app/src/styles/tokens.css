@@ -1,0 +1,105 @@
+/* ByteCore design tokens: values copied from the Figma variables (ByteCore + Web/Market collections). */
+:root {
+  --bg-solid-base: #202020;
+  --bg-solid-secondary: #1c1c1c;
+  --bg-solid-tertiary: #282828;
+  --bg-layer: #272727;
+  --bg-card: #2b2b2b;
+  --bg-card-secondary: #262626;
+  --bg-flyout: #2c2c2c;
+  --bg-taskbar: #1c1c1c;
+  --bg-smoke: #0000004d;
+  --bg-mica: #1f1f1f;
+  --desktop: #18223d;
+
+  --control-default: #2d2d2d;
+  --control-hover: #323232;
+  --control-pressed: #272727;
+  --control-disabled: #2a2a2a;
+  --control-input-active: #1f1f1f;
+  --control-strong: #ffffff8a;
+  --subtle-hover: #ffffff0f;
+  --subtle-pressed: #ffffff0a;
+  --subtle-selected: #ffffff0f;
+
+  --stroke-control: #ffffff12;
+  --stroke-control-strong: #ffffff8a;
+  --stroke-card: #0000001a;
+  --stroke-divider: #ffffff15;
+  --stroke-surface: #75757566;
+
+  --text-primary: #ffffff;
+  --text-secondary: #c5c5c5;
+  --text-tertiary: #9d9d9d;
+  --text-disabled: #5d5d5d;
+  --text-on-accent: #000000;
+
+  --accent: #60cdff;
+  --accent-hover: #5ab9e6;
+  --accent-pressed: #53a5cc;
+  --accent-disabled: #ffffff29;
+  --accent-text: #99ebff;
+
+  --success: #6ccb5f;
+  --caution: #fce100;
+  --critical: #ff99a4;
+  --neutral: #9d9d9d;
+  --success-bg: #393d1b;
+  --caution-bg: #433519;
+  --critical-bg: #442726;
+  --attention-bg: #2b2b2b;
+  --close-hover: #c42b1c;
+
+  --term-bg: #0c0c0c;
+  --term-text: #cccccc;
+  --term-blue: #3b78ff;
+  --term-green: #16c60c;
+  --term-red: #e74856;
+  --term-yellow: #f9f1a5;
+
+  --rarity-common: #c5c5c5;
+  --rarity-rare: #60cdff;
+  --rarity-epic: #d3a6ff;
+  --rarity-legendary: #ffb900;
+
+  --r-control: 4px;
+  --r-overlay: 8px;
+
+  /* Web/Market: the in-browser shop site's own light brand */
+  --web-bg: #f3f5f8;
+  --web-surface: #ffffff;
+  --web-surface-alt: #f7f8fa;
+  --web-border: #e2e6ec;
+  --web-text: #1b1f27;
+  --web-text-2: #5d6573;
+  --web-text-3: #8a93a2;
+  --web-brand: #1463d8;
+  --web-brand-dark: #0d4fb3;
+  --web-brand-tint: #eaf2fe;
+  --web-on-brand: #ffffff;
+  --web-price: #e02d3c;
+  --web-success: #1f9d55;
+  --web-warning: #d98200;
+
+  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+}
+
+/* Text styles (ByteCore/*) */
+.t-caption { font: 400 12px/16px var(--font); }
+.t-body { font: 400 14px/20px var(--font); }
+.t-body-strong { font: 600 14px/20px var(--font); }
+.t-body-large { font: 400 18px/24px var(--font); }
+.t-subtitle { font: 600 20px/28px var(--font); }
+.t-title { font: 600 28px/36px var(--font); }
+.t-title-large { font: 600 40px/52px var(--font); }
+.t-display { font: 600 68px/92px var(--font); }
+.t-mono { font: 400 14px/20px var(--mono); }
+
+.c-primary { color: var(--text-primary); }
+.c-secondary { color: var(--text-secondary); }
+.c-tertiary { color: var(--text-tertiary); }
+.c-accent { color: var(--accent); }
+.c-success { color: var(--success); }
+.c-caution { color: var(--caution); }
+.c-critical { color: var(--critical); }

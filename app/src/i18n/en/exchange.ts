@@ -1,0 +1,21 @@
+// Data exchange site (GDD 3.4). Its own brand, separate from Core Market.
+export default {
+  "exchange.name": "Core Exchange",
+  "exchange.tagline": "Anonymous data broker",
+  "exchange.toMarket": "Market",
+  "exchange.title": "Sell data",
+  "exchange.empty": "No data to sell yet. Pull files from targets in the Terminal first.",
+  "exchange.col.file": "File",
+  "exchange.col.source": "Source",
+  "exchange.col.tier": "Tier",
+  "exchange.col.value": "Value",
+  "exchange.col.status": "Status",
+  "exchange.tier": "Tier {tier}",
+  "exchange.sold": "Sold",
+  "exchange.ready": "Ready",
+  "exchange.locked": "Needs level {level}",
+  "exchange.sellSelected": "Sell selected",
+  "exchange.sellAll": "Sell all",
+  "exchange.selectedLine": "{count} selected · {total}",
+  "exchange.flash": "Sold {count} files for {total}.",
+} as const;

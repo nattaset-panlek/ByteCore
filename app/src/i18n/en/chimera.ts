@@ -1,0 +1,22 @@
+// Chimera Kit: the remote session toolkit (GDD 3.1.2).
+export default {
+  "chimera.noSession.title": "No active session",
+  "chimera.noSession.text": "Open a target in the Terminal with 'connect <addr>' to manage the session here.",
+  "chimera.openTerminal": "Open Terminal",
+  "chimera.session": "Remote session",
+  "chimera.target": "Target",
+  "chimera.tier": "Tier {tier}",
+  "chimera.security": "Security {security}/10",
+  "chimera.admin": "Admin {admin}",
+  "chimera.connectedFor": "Connected {time}",
+  "chimera.trace": "Trace",
+  "chimera.secondsLeft": "{seconds}s remaining",
+  "chimera.traceWarn": "Finish transfers and disconnect from {ip}.",
+  "chimera.disconnect": "Disconnect",
+  "chimera.transfers": "Transfers",
+  "chimera.noTransfers": "No transfers running. Use 'pull <path>' in the Terminal.",
+  "chimera.pulling": "Pulling {name}",
+  "chimera.files": "Files on target",
+  "chimera.pull": "Pull",
+  "chimera.warnTitle": "Trace detected",
+} as const;

@@ -1,0 +1,31 @@
+import type { ComponentType } from "react";
+import type { AppId } from "../os/apps";
+import { PlaceholderBody } from "./Placeholder";
+import { SettingsApp } from "./SettingsApp";
+import { Browser } from "./browser/Browser";
+import { Terminal } from "./terminal/Terminal";
+import { ChimeraKit } from "./ChimeraKit";
+import { Contracts } from "./Contracts";
+import { TaskManager } from "./TaskManager";
+import { FileExplorer } from "./FileExplorer";
+import { RigManager } from "./RigManager";
+import { RigStock } from "./RigStock";
+import { Wallet } from "./Wallet";
+import "./apps.css";
+import "./browser/browser.css";
+
+/** App id → window content. Apps with chrome "custom" render their own header. */
+export const APP_COMPONENTS: Record<AppId, ComponentType> = {
+  explorer: FileExplorer,
+  terminal: Terminal,
+  browser: Browser,
+  rigManager: RigManager,
+  rigStock: RigStock,
+  wallet: Wallet,
+  taskManager: TaskManager,
+  profile: PlaceholderBody,
+  settings: SettingsApp,
+  scriptEditor: PlaceholderBody,
+  contracts: Contracts,
+  chimeraKit: ChimeraKit,
+};
