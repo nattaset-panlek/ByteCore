@@ -8,6 +8,8 @@
 .term-line.tone-accent { color: var(--term-blue); }
 .term-line.tone-muted { color: #8a8a8a; }
 .term-input-row { display: flex; align-items: baseline; gap: 8px; }
+/* A command is running: keep the input focused for Ctrl+C but hide the prompt. */
+.term-input-row.busy { height: 0; overflow: hidden; opacity: 0; }
 .term-prompt { color: var(--term-green); white-space: nowrap; }
 .term-input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--term-text); font: inherit; caret-color: var(--term-green); }
 .term-input::placeholder { color: #4a4a4a; }

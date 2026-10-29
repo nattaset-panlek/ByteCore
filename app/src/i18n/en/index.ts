@@ -11,9 +11,11 @@ import taskmgr from "./taskmgr";
 import modules from "./modules";
 import legal from "./legal";
 import scripteditor from "./scripteditor";
+import editors from "./editors";
 import profile from "./profile";
 import tutorial from "./tutorial";
 import boot from "./boot";
 import ctx from "./ctx";
+import appsdk from "./appsdk";
 
-export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...profile, ...tutorial, ...boot, ...ctx } as const;
+export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...editors, ...profile, ...tutorial, ...boot, ...ctx, ...appsdk } as const;

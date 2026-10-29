@@ -13,6 +13,31 @@ export const ACCENTS: Record<AccentId, { label: string; color: string; hover: st
   amber: { label: "Amber", color: "#ffb900", hover: "#e6a700", pressed: "#cc9400", onAccent: "#1a1200" },
 };
 
+/** Settings → Personalization → Taskbar. */
+export interface TaskbarPrefs {
+  search: "hide" | "icon" | "box";
+  widgets: boolean;
+  heat: boolean;
+  networkSound: boolean;
+  hiddenIcons: boolean;
+  align: "center" | "left";
+  autoHide: boolean;
+  badges: boolean;
+  seconds: boolean;
+}
+
+export const TASKBAR_DEFAULTS: TaskbarPrefs = {
+  search: "box",
+  widgets: true,
+  heat: true,
+  networkSound: true,
+  hiddenIcons: true,
+  align: "center",
+  autoHide: false,
+  badges: true,
+  seconds: false,
+};
+
 interface Settings {
   accent: AccentId;
   reduceMotion: boolean;
@@ -21,15 +46,21 @@ interface Settings {
   /** Fixed render resolution ("WxH"); the stage scales it to fit the real window. */
   aspect: Aspect;
   resolution: string;
+  /** Desktop shortcut grid cells by app id: [column, row]. Missing ids use the default column. */
+  iconLayout: Record<string, [number, number]>;
+  taskbar: TaskbarPrefs;
 }
 
 const KEY = "bytecore.settings";
-const DEFAULTS: Settings = { accent: "blue", reduceMotion: false, sound: true, tutorialSeen: false, aspect: "16:9", resolution: "1920x1080" };
+const DEFAULTS: Settings = { accent: "blue", reduceMotion: false, sound: true, tutorialSeen: false, aspect: "16:9", resolution: "1920x1080", iconLayout: {}, taskbar: TASKBAR_DEFAULTS };
 
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = JSON.parse(raw);
+      return { ...DEFAULTS, ...saved, taskbar: { ...TASKBAR_DEFAULTS, ...saved.taskbar } };
+    }
   } catch {
     /* storage unavailable */
   }

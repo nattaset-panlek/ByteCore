@@ -24,13 +24,16 @@ export interface Part {
   removedAt?: number;
 }
 
-export type FileKind = "exe" | "dll" | "js" | "db" | "sql" | "dat" | "key" | "txt" | "log" | "css";
+export type FileKind = "exe" | "dll" | "js" | "db" | "sql" | "dat" | "key" | "txt" | "log" | "css" | "pdf";
 
+/** A sellable data file. Name, kind and rarity come from its database item; these fields are per copy. */
 export interface Loot {
   hash: string;
   value: number;
   tier: number;
   source: string;
+  /** Row id in the data item database (game/items.ts). Older saves have none: see lootRarity(). */
+  item?: string;
 }
 
 export interface FileNode {
@@ -49,6 +52,8 @@ export interface DirNode {
   type: "dir";
   name: string;
   children: Record<string, VNode>;
+  /** Hidden system folder (AppData, ProgramData...): shown only with View > Show > Hidden items. */
+  hidden?: boolean;
 }
 
 export type VNode = FileNode | DirNode;
@@ -116,7 +121,7 @@ export interface Contract {
   status: ContractStatus;
 }
 
-export type JobKind = "scan" | "probe" | "crack" | "pull";
+export type JobKind = "scan" | "probe" | "crack" | "pull" | "download" | "compile";
 
 /** A running task in the game loop (GDD 3.1). Finishes on its own; shown in Task Manager. */
 export interface Job {
@@ -133,6 +138,8 @@ export interface Job {
   endsAt: number;
   /** Share of rig CPU/network this job claims, 0..1, for Task Manager graphs */
   load: number;
+  /** download / compile: what to write when the job finishes (see game/appsdk/jobs.ts) */
+  payload?: Record<string, string>;
 }
 
 /** The active remote connection (GDD 3.1.2). One at a time. */
@@ -170,3 +177,26 @@ export type Legal =
   | { state: "free" }
   | { state: "warrant"; bail: number }
   | { state: "prison"; until: number; jailbreakUsed: boolean; jailbreakLocked: boolean };
+
+/** A player-made app installed from an .install_<id>.exe package (docs/app-sdk.md). */
+export interface InstalledApp {
+  /** Manifest id; the window AppId is `user.<id>` */
+  id: string;
+  name: string;
+  version: string;
+  author: string;
+  description: string;
+  icon: string;
+  color: string;
+  width: number;
+  height: number;
+  /** The .xjs source the app runs */
+  source: string;
+  /** Folder in Program Files; the app's files live under <dir>/data */
+  dir: string;
+  installedAt: number;
+  startMenu: boolean;
+  pinned: boolean;
+  /** xea.storage key/values */
+  storage: Record<string, string>;
+}

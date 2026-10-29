@@ -10,7 +10,9 @@ export type JobOutcome =
   | { kind: "scan"; found: HostSummary[] }
   | { kind: "probe"; host: Host }
   | { kind: "crack"; ip: string; ok: boolean }
-  | { kind: "pull"; ip: string; remotePath: string; ok: boolean; dest?: string; size?: number; error?: Msg };
+  | { kind: "pull"; ip: string; remotePath: string; ok: boolean; dest?: string; size?: number; error?: Msg }
+  | { kind: "download"; url: string; ok: boolean; dest?: string; size?: number; error?: Msg }
+  | { kind: "compile"; src: string; ok: boolean; dest?: string; error?: string };
 
 export type GameEvent =
   | { type: "orderDelivered"; order: Order }

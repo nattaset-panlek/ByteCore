@@ -8,6 +8,9 @@ import { useGame } from "../game/store";
 import { incomePerHour } from "../game/state";
 import { fmt, useT } from "../i18n";
 import { SCRUB_CHUNK, SCRUB_COST_PER_POINT } from "../game/balance";
+import { useSettings } from "./settingsStore";
+import { pinnedUserApps, useUserApps } from "./userApps";
+import { userAppMenu } from "../apps/userApp/AppsPage";
 
 /** Heat meter with a flyout to scrub logs (careful play, GDD 3.6). */
 function HeatWidget({ heat, tone }: { heat: number; tone: string }) {
@@ -63,31 +66,36 @@ export function Taskbar() {
   const balance = useGame((s) => s.game.wallet.balance);
   const perHour = useGame((s) => incomePerHour(s.game));
   const heat = useGame((s) => s.game.heat) / 100;
+  const prefs = useSettings((s) => s.taskbar);
+  const userApps = useUserApps();
 
   const active = activeWindow(windows);
   const running = new Set(windows.map((w) => w.appId));
-  const apps: AppId[] = [...PINNED_APPS, ...[...running].filter((id) => !PINNED_APPS.includes(id))];
+  const pinned: AppId[] = [...PINNED_APPS, ...pinnedUserApps(userApps)];
+  const apps: AppId[] = [...pinned, ...[...running].filter((id) => !pinned.includes(id))];
 
   const heatTone = heat > 0.75 ? "critical" : heat > 0.5 ? "caution" : "success";
 
   return (
     <div
-      className="taskbar"
+      className={`taskbar ${prefs.align === "left" ? "align-left" : ""} ${prefs.autoHide ? "auto-hide" : ""} ${startOpen ? "shown" : ""}`}
       onContextMenu={(e) =>
         openContextMenu(e, [
           { label: appName("taskManager"), icon: APPS.taskManager.icon, onClick: () => activateApp("taskManager") },
-          { label: t("ctx.taskbarSettings"), icon: "icon/settings", onClick: () => activateApp("settings") },
+          { label: t("ctx.taskbarSettings"), icon: "icon/settings", onClick: () => useWindows.getState().open("settings", { page: "taskbar" }) },
         ])
       }
     >
       <div className="taskbar-left">
-        <button type="button" className="tb-widget" onClick={() => activateApp("wallet")}>
-          <Icon name="app/Wallet" size={20} />
-          <span className="tb-widget-text">
-            <span className="t-caption">{fmt.credits(balance)}</span>
-            <span className="t-caption c-secondary">{t("taskbar.perHour", { amount: fmt.signedCredits(perHour) })}</span>
-          </span>
-        </button>
+        {prefs.widgets && (
+          <button type="button" className="tb-widget" onClick={() => activateApp("wallet")}>
+            <Icon name="app/Wallet" size={20} />
+            <span className="tb-widget-text">
+              <span className="t-caption">{fmt.credits(balance)}</span>
+              <span className="t-caption c-secondary">{t("taskbar.perHour", { amount: fmt.signedCredits(perHour) })}</span>
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="taskbar-center">
@@ -100,10 +108,18 @@ export function Taskbar() {
         >
           <Icon name="app/XeaLogo" size={24} />
         </button>
-        <button type="button" className="tb-search" data-start-toggle onClick={() => setStart(true, "")}>
-          <Icon name="icon/search" size={16} />
-          <span>{t("taskbar.search")}</span>
-        </button>
+        {prefs.search !== "hide" && (
+          <button
+            type="button"
+            className={`tb-search ${prefs.search === "icon" ? "tb-search-icon" : ""}`}
+            aria-label={t("taskbar.search")}
+            data-start-toggle
+            onClick={() => setStart(true, "")}
+          >
+            <Icon name="icon/search" size={16} />
+            {prefs.search === "box" && <span>{t("taskbar.search")}</span>}
+          </button>
+        )}
         {apps.map((id) => {
           const isRunning = running.has(id);
           const isActive = active?.appId === id;
@@ -120,29 +136,34 @@ export function Taskbar() {
                 openContextMenu(e, [
                   { label: appName(id), icon: APPS[id].icon, onClick: () => activateApp(id) },
                   ...(APPS[id].multiInstance || own.length === 0 ? [{ label: t("ctx.newWindow"), icon: "icon/add", onClick: () => ws.open(id) }] : []),
+                  ...userAppMenu(id),
                   ...(own.length ? [separator, { label: t(own.length > 1 ? "ctx.closeAll" : "ctx.closeWindow"), icon: "icon/dismiss", danger: true, onClick: () => own.forEach((w) => ws.close(w.id)) }] : []),
                 ]);
               }}
             >
               <Icon name={APPS[id].icon} size={24} />
-              {isRunning && <span className="tb-indicator" />}
+              {isRunning && prefs.badges && <span className="tb-indicator" />}
             </button>
           );
         })}
       </div>
 
       <div className="taskbar-right">
-        <HeatWidget heat={heat} tone={heatTone} />
+        {prefs.heat && <HeatWidget heat={heat} tone={heatTone} />}
         <span />
-        <button type="button" className="tb-tray-btn" aria-label={t("taskbar.hiddenIcons")}>
-          <Icon name="icon/chevron_up" size={12} />
-        </button>
-        <button type="button" className="tb-tray-btn tb-tray-group" aria-label={t("taskbar.networkSound")}>
-          <Icon name="icon/wifi_1" size={16} />
-          <Icon name="icon/speaker_2" size={16} />
-        </button>
+        {prefs.hiddenIcons && (
+          <button type="button" className="tb-tray-btn" aria-label={t("taskbar.hiddenIcons")}>
+            <Icon name="icon/chevron_up" size={12} />
+          </button>
+        )}
+        {prefs.networkSound && (
+          <button type="button" className="tb-tray-btn tb-tray-group" aria-label={t("taskbar.networkSound")}>
+            <Icon name="icon/wifi_1" size={16} />
+            <Icon name="icon/speaker_2" size={16} />
+          </button>
+        )}
         <button type="button" className="tb-tray-btn tb-clock">
-          <span>{fmt.time(now.getTime())}</span>
+          <span>{prefs.seconds ? fmt.timeSeconds(now.getTime()) : fmt.time(now.getTime())}</span>
           <span>{fmt.shortDate(now.getTime())}</span>
         </button>
       </div>

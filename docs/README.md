@@ -17,5 +17,6 @@ Figma conventions in [`tools/figma-build/STYLE_NOTES.md`](../tools/figma-build/S
 | [scripting.md](scripting.md) | Phase 6: Script Editor, the Web Worker runtime and the ByteCore scripting API |
 | [progression.md](progression.md) | Phase 7: character/progression data, levels & unlocks, Profile, Settings, tutorial, balance |
 | [release.md](release.md) | Phase 8: sounds, animations, boot & sign-in, icon, version, portable .exe + installer |
+| [app-sdk.md](app-sdk.md) | App SDK: .xjs apps, wget/import, IDE compile jobs, Setup, sandboxed installed apps, Xea Soft |
 
 Keep these docs up to date when a system changes.

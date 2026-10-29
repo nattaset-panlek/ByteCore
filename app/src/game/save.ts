@@ -1,6 +1,7 @@
 import { SAVE_VERSION, TICK_MS } from "./balance";
 import { newGame, type GameState } from "./state";
 import { useGame } from "./store";
+import { withGuide, withSkeleton } from "./vfs";
 
 // Save/load in IndexedDB (GDD 7.2), one slot. Autosave at most every AUTOSAVE_MS while the state changes,
 // and right away when the window is hidden or closed.
@@ -39,7 +40,9 @@ export function saveGame(g: GameState = useGame.getState().game): Promise<unknow
 
 export async function loadSave(): Promise<GameState | null> {
   const g = await run<GameState | undefined>("readonly", (s) => s.get(SLOT));
-  return g ? migrate(g) : null;
+  if (!g) return null;
+  const m = migrate(g);
+  return { ...m, fs: withSkeleton(withGuide(m.fs)) };
 }
 
 export function deleteSave(): Promise<unknown> {
@@ -61,6 +64,8 @@ function migrate(g: GameState): GameState {
 }
 
 let started = false;
+/** When the save was last played (before this run's offline tick), for the sign-in screen. Null on a new game. */
+export let lastPlayedAt: number | null = null;
 
 /** Load the save (or create a new game), apply offline progress, then run the 1s loop and autosave. */
 export async function startGame(): Promise<void> {
@@ -73,8 +78,10 @@ export async function startGame(): Promise<void> {
   } catch (e) {
     console.error("Could not read save", e);
   }
-  if (saved) store.load(saved);
-  else store.reset();
+  if (saved) {
+    lastPlayedAt = saved.lastTick;
+    store.load(saved);
+  } else store.reset();
   useGame.getState().tick(); // offline progress since the last save
 
   window.setInterval(() => useGame.getState().tick(), TICK_MS);
@@ -101,4 +108,32 @@ export async function startGame(): Promise<void> {
 export async function resetGame(): Promise<void> {
   useGame.getState().reset();
   await saveGame();
+}
+
+/** Download the current save as a .json file (Settings > System, loaded again from the sign-in screen). */
+export function exportSave(): void {
+  const g = useGame.getState().game;
+  const blob = new Blob([JSON.stringify(g)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `bytecore-${g.player.name}-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/** Replace the game with a save file's contents. Returns false when the file is not a ByteCore save. */
+export async function importSave(text: string): Promise<boolean> {
+  let g: GameState;
+  try {
+    g = JSON.parse(text);
+  } catch {
+    return false;
+  }
+  if (!g || typeof g !== "object" || !g.fs || !g.player || !g.wallet) return false;
+  const m = migrate(g);
+  lastPlayedAt = m.lastTick;
+  useGame.getState().load({ ...m, fs: withSkeleton(withGuide(m.fs)) });
+  useGame.getState().tick();
+  await saveGame();
+  return true;
 }

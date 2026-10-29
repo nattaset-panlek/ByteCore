@@ -1,4 +1,6 @@
-import { APP_COMPONENTS } from "../apps";
+import { memo } from "react";
+import type { AppId } from "../os/apps";
+import { appComponent } from "../apps";
 import { Desktop } from "../os/Desktop";
 import { useGameNotifications } from "../os/gameNotifications";
 import { useTutorial } from "../os/useTutorial";
@@ -7,29 +9,23 @@ import { Taskbar } from "../os/Taskbar";
 import { ToastStack } from "../os/ToastStack";
 import { ContextMenu } from "../os/ContextMenuHost";
 import { Window } from "../os/Window";
-import { useShell } from "../os/shellStore";
 import { useWindows } from "../os/windowStore";
 import { useGame } from "../game/store";
-import { useT } from "../i18n";
 import { WarrantScreen } from "./WarrantScreen";
 import { PrisonScreen } from "./PrisonScreen";
 
+/** One app's window content. Memoized on the app id: focus, move and resize changes skip it. */
+const AppBody = memo(function AppBody({ appId }: { appId: AppId }) {
+  const Body = appComponent(appId);
+  return <Body />;
+});
+
 /** Xea OS desktop: wallpaper + shortcuts, windows, taskbar, Start, toasts. */
 export function DesktopScreen() {
-  const t = useT();
   const windows = useWindows((s) => s.windows);
-  const { poweredOff, powerOn } = useShell();
   const legal = useGame((s) => s.game.legal);
   useGameNotifications();
   useTutorial();
-
-  if (poweredOff) {
-    return (
-      <div className="powered-off" onClick={powerOn}>
-        <span className="t-caption c-tertiary">{t("desktop.powerOn")}</span>
-      </div>
-    );
-  }
 
   // Risk and consequences (GDD 3.6): the desktop is locked behind a warrant or a prison sentence.
   if (legal.state === "warrant") return <WarrantScreen bail={legal.bail} />;
@@ -38,14 +34,11 @@ export function DesktopScreen() {
   return (
     <div className="os">
       <Desktop />
-      {windows.map((w) => {
-        const Body = APP_COMPONENTS[w.appId];
-        return (
-          <Window key={w.id} win={w}>
-            <Body />
-          </Window>
-        );
-      })}
+      {windows.map((w) => (
+        <Window key={w.id} win={w}>
+          <AppBody appId={w.appId} />
+        </Window>
+      ))}
       <StartMenu />
       <ToastStack />
       <Taskbar />

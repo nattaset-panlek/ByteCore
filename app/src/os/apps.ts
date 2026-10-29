@@ -12,8 +12,13 @@ export type AppId =
   | "profile"
   | "settings"
   | "scriptEditor"
+  | "textEditor"
+  | "pdfReader"
   | "contracts"
-  | "chimeraKit";
+  | "chimeraKit"
+  | "installer"
+  /** Player-made apps installed from an .xjs package (os/userApps.ts) */
+  | `user.${string}`;
 
 export interface AppDef {
   id: AppId;
@@ -38,16 +43,19 @@ const def = (id: AppId, name: string, icon: string, size: [number, number], chro
 export const APPS: Record<AppId, AppDef> = {
   explorer: def("explorer", "File Explorer", "app/FileExplorer", [1000, 640], "custom", true),
   terminal: def("terminal", "Terminal", "app/Terminal", [900, 560], "custom", true),
-  browser: def("browser", "Browser", "icon/globe", [1280, 800], "custom"),
+  browser: def("browser", "Browser", "app/Browser", [1280, 800], "custom"),
   rigManager: def("rigManager", "Rig Manager", "app/RigManager", [1100, 720], "custom"),
-  rigStock: def("rigStock", "Rig Stock", "icon/square_multiple", [1040, 680], "custom"),
+  rigStock: def("rigStock", "Rig Stock", "app/RigStock", [1040, 680], "custom"),
   wallet: def("wallet", "Wallet", "app/Wallet", [1040, 720], "custom"),
   taskManager: def("taskManager", "Task Manager", "app/TaskManager", [980, 640], "custom"),
   profile: def("profile", "Profile", "app/Profile", [960, 660]),
   settings: def("settings", "Settings", "app/Settings", [1100, 720], "custom"),
-  scriptEditor: def("scriptEditor", "Script Editor", "icon/document", [1100, 720]),
+  scriptEditor: def("scriptEditor", "IDE", "app/IDE", [1180, 760], "custom"),
+  textEditor: def("textEditor", "Text Editor", "app/TextEditor", [960, 640], "custom"),
+  pdfReader: def("pdfReader", "PDF Reader", "app/PdfReader", [1000, 760], "custom", true),
   contracts: def("contracts", "Contracts", "app/Contracts", [1000, 660], "custom"),
   chimeraKit: def("chimeraKit", "Chimera Kit", "app/ChimeraKit", [1000, 660]),
+  installer: def("installer", "Setup", "icon/arrow_download", [600, 460], "custom", true),
 };
 
 /** Localized app name (call inside a component that uses useT() so it re-renders). `name` is the English fallback. */
@@ -67,12 +75,13 @@ export const APP_ORDER: AppId[] = [
   "wallet",
   "taskManager",
   "scriptEditor",
+  "textEditor",
   "profile",
   "settings",
 ];
 
 /** Desktop shortcuts, top-left column (Figma Screen/Desktop). */
-export const DESKTOP_APPS: AppId[] = ["explorer", "terminal", "chimeraKit", "contracts", "rigManager", "wallet", "taskManager", "settings"];
+export const DESKTOP_APPS: AppId[] = ["explorer", "terminal", "browser", "scriptEditor", "textEditor", "chimeraKit", "contracts", "rigManager", "rigStock", "wallet", "taskManager", "settings"];
 
 /** Pinned taskbar apps (Figma taskbar). */
-export const PINNED_APPS: AppId[] = ["explorer", "terminal", "chimeraKit", "contracts", "rigManager", "wallet", "taskManager", "settings"];
+export const PINNED_APPS: AppId[] = ["explorer", "terminal", "browser", "scriptEditor", "textEditor", "chimeraKit", "contracts", "rigManager", "rigStock", "wallet", "taskManager", "settings"];

@@ -3,7 +3,7 @@ import { STARTER_RIG } from "./catalog";
 import type { Rig } from "./rig";
 import { refillContracts } from "./contracts";
 import { BAIL, CONTRACT_POOL } from "./balance";
-import type { Contract, DirNode, Host, Job, Legal, Order, Part, Session, Txn } from "./types";
+import type { Contract, DirNode, Host, InstalledApp, Job, Legal, Order, Part, Session, Txn } from "./types";
 import { starterDrive } from "./vfs";
 
 export interface IncomeSource {
@@ -18,6 +18,8 @@ export interface GameState {
   createdAt: number;
   /** Time of the last processed tick (drives offline progress) */
   lastTick: number;
+  /** First-run setup (name, look) finished. Only a new game sets false; older saves have none and count as done. */
+  setupDone?: boolean;
   /** Character and progression — one cohesive block so saves and resets are clean. */
   player: Player;
   wallet: {
@@ -58,6 +60,10 @@ export interface GameState {
   contracts: Contract[];
   /** Installed passive module ids (GDD 3.2) */
   modules: string[];
+  /** Player-made apps installed in Xea OS (docs/app-sdk.md) */
+  apps: InstalledApp[];
+  /** Software bought on Xea Soft (catalog ids); bought items download free again */
+  software: string[];
 }
 
 /** The player's character and progression (GDD 4). Grouped so it saves and resets as a unit. */
@@ -89,6 +95,7 @@ export function newGame(now = Date.now()): GameState {
     version: SAVE_VERSION,
     createdAt: now,
     lastTick: now,
+    setupDone: false,
     player: { name: "ghost_user", level: 1, xp: 0, stats: { cracks: 0, pulls: 0, dataSold: 0, contracts: 0, arrests: 0, peakHeat: 0 } },
     wallet: {
       balance: STARTING_BALANCE,
@@ -116,6 +123,8 @@ export function newGame(now = Date.now()): GameState {
     nextJob: 1,
     contracts: refillContracts([], 1, CONTRACT_POOL),
     modules: [],
+    apps: [],
+    software: [],
   };
 }
 

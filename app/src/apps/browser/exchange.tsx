@@ -2,7 +2,8 @@ import { useState } from "react";
 import { TIER_UNLOCK_LEVEL } from "../../game/balance";
 import { useGame } from "../../game/store";
 import { useT } from "../../i18n";
-import { Icon } from "../../ui";
+import { Icon, RarityLabel } from "../../ui";
+import { lootRarity } from "../../game/network";
 import * as vfs from "../../game/vfs";
 import { credits, fileSize } from "../common";
 import { exchangeName, NEW_TAB_URL, urls } from "./routes";
@@ -77,6 +78,7 @@ export function Exchange({ navigate }: { navigate: Nav }) {
               <span>{t("exchange.col.file")}</span>
               <span>{t("exchange.col.source")}</span>
               <span>{t("exchange.col.tier")}</span>
+              <span>{t("exchange.col.rarity")}</span>
               <span className="num">{t("exchange.col.value")}</span>
               <span>{t("exchange.col.status")}</span>
             </div>
@@ -89,6 +91,7 @@ export function Exchange({ navigate }: { navigate: Nav }) {
                 </span>
                 <span className="web-muted">{f.loot.source}</span>
                 <span>{t("exchange.tier", { tier: f.loot.tier })}</span>
+                <RarityLabel rarity={lootRarity(f.loot)} />
                 <span className={`num ${f.isSold ? "web-muted" : "exchange-price"}`}>{f.isSold ? credits(0) : credits(f.loot.value)}</span>
                 <span>
                   {f.isSold ? (

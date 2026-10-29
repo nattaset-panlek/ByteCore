@@ -1,5 +1,6 @@
 import { TIER_UNLOCK_LEVEL } from "./balance";
-import type { DirNode, FileNode, Host, Loot } from "./types";
+import { DATA_ITEMS, getItem, itemsFor, itemValue, RARITY_ODDS, type DataItem } from "./items";
+import type { DirNode, FileNode, Host, Loot, Rarity } from "./types";
 import { dir, file } from "./vfs";
 
 // Simulated network (GDD 4): fictional targets generated per tier from a seed.
@@ -31,17 +32,6 @@ const ORGS: Record<number, string[]> = {
 };
 
 const SLUG = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
-/** Loot file kinds per tier: [base name, ext, size MB min, size MB max]. */
-const LOOT: Record<number, [string, string, number, number][]> = {
-  1: [["customers", "db", 4, 12], ["mailing_list", "sql", 2, 8], ["gift_cards", "dat", 1, 3]],
-  2: [["employees", "db", 20, 60], ["invoices", "sql", 15, 40], ["accounts", "dat", 8, 20]],
-  3: [["ledger", "db", 120, 400], ["patient_records", "sql", 80, 250], ["transfers", "dat", 60, 150]],
-  4: [["grid_map", "db", 600, 1500], ["contracts", "sql", 400, 900], ["master_keys", "dat", 200, 600]],
-};
-
-/** Credits per loot file, before the size bonus. Roughly matches the parts a tier can afford. */
-const LOOT_BASE: Record<number, number> = { 1: 150, 2: 800, 3: 4200, 4: 26000 };
 
 /** Private-range style address prefix per tier (fictional, not routable). */
 const IP_PREFIX: Record<number, string> = { 1: "192.168", 2: "10.0", 3: "172.16", 4: "10.10" };
@@ -76,27 +66,49 @@ export interface HostSummary {
   tier: number;
 }
 
-function lootFile(base: string, ext: string, size: number, tier: number, host: string, seed: number): FileNode {
-  const loot: Loot = {
-    hash: `${host}-${base}-${seed.toString(36)}`,
-    value: Math.round(LOOT_BASE[tier] * (0.6 + size / (LOOT[tier][0][3] * 1.5))),
-    tier,
-    source: host,
-  };
-  const f = file(`${base}.${ext}`, size);
-  return { ...f, loot };
+function rollRarity(roll: number): Rarity {
+  let acc = 0;
+  for (const [rarity, chance] of RARITY_ODDS) {
+    acc += chance;
+    if (roll < acc) return rarity;
+  }
+  return "Common";
+}
+
+/** A loot file's rarity, from its item in the database. Older saves have no item id: derived from the hash. */
+export function lootRarity(loot: Loot): Rarity {
+  const item = getItem(loot.item);
+  if (item) return item.rarity;
+  let h = 0;
+  for (const c of loot.hash) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
+  return rollRarity((h % 10000) / 10000);
+}
+
+/** One copy of a database item: the file keeps only the item id and what differs per copy. */
+function lootFile(r: ReturnType<typeof rng>, item: DataItem, host: string, seed: number): FileNode {
+  const size = r.int(item.size[0], item.size[1]);
+  const loot: Loot = { hash: `${host}-${item.id}-${seed.toString(36)}`, item: item.id, value: itemValue(item, size), tier: item.tier, source: host };
+  return { ...file(`${item.file}.${item.ext}`, size), loot };
+}
+
+/** Roll a rarity, then an item of that rarity for the tier (falling back to commoner ones). */
+function rollItem(r: ReturnType<typeof rng>, tier: number): DataItem {
+  const order = RARITY_ODDS.map(([x]) => x);
+  for (let i = order.indexOf(rollRarity(r.next())); i < order.length; i++) {
+    const pool = itemsFor(tier, order[i]);
+    if (pool.length) return r.pick(pool);
+  }
+  return r.pick(DATA_ITEMS);
 }
 
 /** The target's file system: a couple of lore files and the loot a `pull` can take. */
 function remoteFs(r: ReturnType<typeof rng>, tier: number, host: string, seed: number): DirNode {
   const lore = LORE[tier];
   const docs = [file(r.pick(lore).name, r.int(1, 1) * 0.02, r.pick(lore).text)];
-  const loot = LOOT[tier]
-    .filter(() => r.chance(0.75))
-    .map(([base, ext, lo, hi]) => lootFile(base, ext, r.int(lo, hi), tier, host, seed));
-  if (loot.length === 0) {
-    const [base, ext, lo, hi] = LOOT[tier][0];
-    loot.push(lootFile(base, ext, r.int(lo, hi), tier, host, seed));
+  const loot: FileNode[] = [];
+  for (let i = r.int(2, 4); i > 0; i--) {
+    const item = rollItem(r, tier);
+    if (!loot.some((f) => f.loot?.item === item.id)) loot.push(lootFile(r, item, host, seed));
   }
   return dir(host, [dir("home", docs), dir("var", [dir("data", loot)])]);
 }

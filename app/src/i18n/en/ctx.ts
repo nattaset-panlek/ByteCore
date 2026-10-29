@@ -2,7 +2,9 @@
 export default {
   "ctx.open": "Open",
   "ctx.openApp": "Open {app}",
+  "ctx.arrange": "Arrange icons",
   "ctx.refresh": "Refresh",
+  "ctx.showInExplorer": "Show in File Explorer",
   "ctx.personalize": "Personalize",
   "ctx.newWindow": "New window",
   "ctx.closeWindow": "Close window",

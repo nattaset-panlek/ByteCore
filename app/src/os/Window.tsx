@@ -1,6 +1,7 @@
-import { Component, createContext, useContext, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import { Component, createContext, useCallback, useContext, useMemo, useRef, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { APPS, appName } from "./apps";
 import { TASKBAR_H, useWindows, type Rect, type WinState } from "./windowStore";
+import { useSettings } from "./settingsStore";
 import { Icon } from "../ui";
 import { openContextMenu, separator } from "./contextMenu";
 import { stageDelta, stageSize } from "./stage";
@@ -23,15 +24,27 @@ export function useWindow(): WindowCtx {
   return c;
 }
 
-/** Track a pointer drag from pointerdown until pointerup. */
-function track(e: RPointerEvent, onMove: (dx: number, dy: number) => void) {
+/** Track a pointer drag from pointerdown until pointerup. Moves are batched to one per frame. */
+function track(e: RPointerEvent, onMove: (dx: number, dy: number) => void, onEnd: () => void) {
   const sx = e.clientX;
   const sy = e.clientY;
-  const move = (ev: PointerEvent) => onMove(stageDelta(ev.clientX - sx), stageDelta(ev.clientY - sy));
+  let frame = 0;
+  let last: PointerEvent | null = null;
+  const move = (ev: PointerEvent) => {
+    last = ev;
+    if (!frame)
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (last) onMove(stageDelta(last.clientX - sx), stageDelta(last.clientY - sy));
+      });
+  };
   const up = () => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
+    cancelAnimationFrame(frame);
+    if (last) onMove(stageDelta(last.clientX - sx), stageDelta(last.clientY - sy));
     document.body.classList.remove("dragging");
+    onEnd();
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
@@ -42,26 +55,57 @@ const EDGES = ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const;
 type Edge = (typeof EDGES)[number];
 
 export function Window({ win, children }: { win: WinState; children: ReactNode }) {
-  const { focus, setRect } = useWindows();
   const app = APPS[win.appId];
+  const autoHide = useSettings((s) => s.taskbar.autoHide);
+  const ref = useRef<HTMLDivElement>(null);
+  const id = win.id;
 
-  const dragStart = (e: RPointerEvent) => {
-    if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest("button, input, .tab-item")) return;
-    focus(win.id);
-    if (win.maximized) return;
-    const start = { x: win.x, y: win.y };
-    track(e, (dx, dy) => {
-      const maxY = stageSize().h - TASKBAR_H - 32;
-      setRect(win.id, { x: start.x + dx, y: Math.min(maxY, Math.max(0, start.y + dy)) });
-    });
+  // While dragging or resizing, the element is moved directly and the store gets the final rect on release,
+  // so no window or app re-renders per pointer move.
+  const live = (r: Partial<Rect>) => {
+    const st = ref.current?.style;
+    if (!st) return;
+    if (r.x !== undefined) st.left = `${r.x}px`;
+    if (r.y !== undefined) st.top = `${r.y}px`;
+    if (r.w !== undefined) st.width = `${r.w}px`;
+    if (r.h !== undefined) st.height = `${r.h}px`;
   };
+  const current = () => useWindows.getState().windows.find((w) => w.id === id);
+
+  const dragStart = useCallback(
+    (e: RPointerEvent) => {
+      if (e.button !== 0) return;
+      if ((e.target as HTMLElement).closest("button, input, .tab-item")) return;
+      useWindows.getState().focus(id);
+      const cur = current();
+      if (!cur || cur.maximized) return;
+      const start = { x: cur.x, y: cur.y };
+      let next = start;
+      track(
+        e,
+        (dx, dy) => {
+          const maxY = stageSize().h - (autoHide ? 0 : TASKBAR_H) - 32;
+          next = { x: start.x + dx, y: Math.min(maxY, Math.max(0, start.y + dy)) };
+          // A transform moves the window on the compositor (no layout); left/top are set once on release.
+          if (ref.current) ref.current.style.transform = `translate(${next.x - start.x}px, ${next.y - start.y}px)`;
+        },
+        () => {
+          useWindows.getState().setRect(id, next);
+          live(next);
+          if (ref.current) ref.current.style.transform = "";
+        }
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, autoHide]
+  );
 
   const resizeStart = (edge: Edge) => (e: RPointerEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    focus(win.id);
+    useWindows.getState().focus(id);
     const s: Rect = { x: win.x, y: win.y, w: win.w, h: win.h };
+    let next = s;
     track(e, (dx, dy) => {
       const r = { ...s };
       if (edge.includes("e")) r.w = Math.max(MIN_W, s.w + dx);
@@ -74,20 +118,27 @@ export function Window({ win, children }: { win: WinState; children: ReactNode }
         r.y = Math.max(0, Math.min(s.y + dy, s.y + s.h - MIN_H));
         r.h = s.y + s.h - r.y;
       }
-      setRect(win.id, r);
-    });
+      next = r;
+      live(r);
+    }, () => useWindows.getState().setRect(id, next));
   };
 
+  // Apps read the window through this context. Geometry and stacking are left out of the memo so moving,
+  // resizing or focusing a window does not re-render what is inside it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ctx = useMemo(() => ({ win, dragStart }), [win.id, win.appId, win.args, win.maximized, win.minimized, dragStart]);
+
   const style = win.maximized
-    ? { left: 0, top: 0, width: "100%", height: `calc(100% - ${TASKBAR_H}px)`, zIndex: win.z }
+    ? { left: 0, top: 0, width: "100%", height: autoHide ? "100%" : `calc(100% - ${TASKBAR_H}px)`, zIndex: win.z }
     : { left: win.x, top: win.y, width: win.w, height: win.h, zIndex: win.z };
 
   return (
-    <Ctx.Provider value={{ win, dragStart }}>
+    <Ctx.Provider value={ctx}>
       <div
+        ref={ref}
         className={`window ${win.maximized ? "maximized" : ""}`}
         style={{ ...style, display: win.minimized ? "none" : undefined }}
-        onPointerDownCapture={() => focus(win.id)}
+        onPointerDownCapture={() => useWindows.getState().focus(id)}
         onContextMenu={(e) => {
           // Fallback window menu for any spot without its own; text fields keep the native menu.
           if ((e.target as HTMLElement).closest("input, textarea")) return;
@@ -116,7 +167,7 @@ export function Window({ win, children }: { win: WinState; children: ReactNode }
 export function CaptionButtons() {
   const t = useT();
   const { win } = useWindow();
-  const { minimize, toggleMaximize, close } = useWindows();
+  const { minimize, toggleMaximize, close } = useWindows.getState();
   return (
     <div className="caption-buttons">
       <button type="button" className="caption-btn" aria-label={t("window.minimize")} onClick={() => minimize(win.id)}>
@@ -136,7 +187,7 @@ export function CaptionButtons() {
 export function TitleBar({ title, onBack }: { title?: string; onBack?: () => void }) {
   const t = useT();
   const { win, dragStart } = useWindow();
-  const { toggleMaximize } = useWindows();
+  const { toggleMaximize } = useWindows.getState();
   const app = APPS[win.appId];
   return (
     <div className="titlebar" onPointerDown={dragStart} onDoubleClick={() => toggleMaximize(win.id)}>
@@ -157,7 +208,7 @@ export function TitleBar({ title, onBack }: { title?: string; onBack?: () => voi
 export function TabRow({ children, onNewTab }: { children: ReactNode; onNewTab?: () => void }) {
   const t = useT();
   const { win, dragStart } = useWindow();
-  const { toggleMaximize } = useWindows();
+  const { toggleMaximize } = useWindows.getState();
   return (
     <div className="tabrow" onPointerDown={dragStart} onDoubleClick={(e) => e.target === e.currentTarget && toggleMaximize(win.id)}>
       <div className="tabrow-tabs">
@@ -175,7 +226,7 @@ export function TabRow({ children, onNewTab }: { children: ReactNode; onNewTab?:
 }
 
 /** Settings-style layout: 320px nav column + page (pad 12/56/24/40). */
-export function SettingsLayout({ nav, title, children }: { nav: ReactNode; title?: string; children: ReactNode }) {
+export function SettingsLayout({ nav, title, children }: { nav: ReactNode; title?: ReactNode; children: ReactNode }) {
   return (
     <div className="settings-layout">
       <nav className="settings-nav">{nav}</nav>

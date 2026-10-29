@@ -52,6 +52,7 @@ export default {
   "terminal.kill.ok": "Job #{id} stopped.",
   "terminal.kill.none": "No job #{id}.",
   "terminal.input": "Type a command",
+  "terminal.busyHint": "Press Ctrl+C to stop.",
   "terminal.ctx.newTab": "New tab",
   "terminal.ctx.copyAll": "Copy all output",
   "terminal.ctx.clear": "Clear",

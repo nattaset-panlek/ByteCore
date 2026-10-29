@@ -1,4 +1,5 @@
 import type { PartKind } from "../../game/types";
+import type { SoftCategory } from "../../game/appsdk/catalog";
 import { t } from "../../i18n";
 
 // Simulated web addresses (GDD 3.7: the Browser shows "Core html" sites, no real internet).
@@ -21,6 +22,7 @@ export type Route =
   | { page: "builder"; slot: PartKind }
   | { page: "orders" }
   | { page: "exchange" }
+  | { page: "soft"; cat: SoftCategory | "all" }
   | { page: "notfound"; url: string };
 
 const KINDS = ["cpu", "ram", "net", "disk"];
@@ -29,6 +31,8 @@ export function parseUrl(raw: string): Route {
   const url = raw.trim();
   if (url === NEW_TAB_URL) return { page: "newtab" };
   if (url === EXCHANGE_URL || url === `${EXCHANGE_URL}/`) return { page: "exchange" };
+  const soft = /^core:\/\/soft(?:\/c\/(\w+))?(\/.*)?$/.exec(url);
+  if (soft) return { page: "soft", cat: (["games", "tools", "dev"].includes(soft[1]) ? soft[1] : "all") as SoftCategory | "all" };
   const m = /^core:\/\/market(\/[^?]*)?(\?.*)?$/.exec(url);
   if (!m) return { page: "notfound", url };
   const path = (m[1] ?? "/").replace(/\/+$/, "") || "/";
@@ -64,6 +68,8 @@ export function pageTitle(url: string): string {
       return t("shop.pageTitle", { site: marketName(), page: t("shop.myOrders") });
     case "exchange":
       return exchangeName();
+    case "soft":
+      return t("soft.name");
     case "category":
       if (r.q) return t("shop.pageTitle", { site: marketName(), page: t("shop.search") });
       return t("shop.pageTitle", { site: marketName(), page: categoryLabel(r.kind) });

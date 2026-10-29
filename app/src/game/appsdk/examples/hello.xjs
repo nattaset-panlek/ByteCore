@@ -1,0 +1,38 @@
+// ==XeaApp==
+// @name        Hello Xea
+// @id          hello
+// @version     1.0.0
+// @author      Xea Labs
+// @description The smallest useful app: a button, a counter that survives restarts, and a toast.
+// @icon        👋
+// @color       #3b78ff
+// @width       420
+// @height      300
+// ==/XeaApp==
+
+// Everything below runs inside a sandbox. `xea` is the SDK; `document` is your window's page.
+const me = await xea.player();
+let clicks = await xea.storage.get("clicks", 0);
+
+const count = xea.el("p", { className: "xea-muted" });
+const show = () => (count.textContent = `You clicked ${clicks} time${clicks === 1 ? "" : "s"}.`);
+
+const button = xea.el("button", {
+  className: "xea-btn accent",
+  onclick: async () => {
+    clicks++;
+    show();
+    await xea.storage.set("clicks", clicks);
+    if (clicks % 10 === 0) xea.notify("Hello Xea", `${clicks} clicks. Impressive, ${me.name}.`);
+  },
+}, "Click me");
+
+document.getElementById("app").append(
+  xea.el("div", { style: { padding: "24px" } },
+    xea.el("h2", {}, `Hello, ${me.name}!`),
+    count,
+    button,
+  ),
+);
+show();
+xea.window.setTitle(`Hello Xea (level ${me.level})`);

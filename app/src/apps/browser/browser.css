@@ -186,7 +186,7 @@
 .exchange-actions { display: flex; align-items: center; gap: 12px; }
 .exchange-flash { padding: 10px 14px; border-radius: 6px; background: var(--web-brand-tint); color: var(--web-brand-dark); font-size: 13px; }
 .exchange-list { padding: 0; gap: 0; }
-.exchange-row { display: grid; grid-template-columns: 32px 1.4fr 1.2fr 70px 110px 120px; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--web-border); }
+.exchange-row { display: grid; grid-template-columns: 32px 1.4fr 1.2fr 70px 96px 110px 120px; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--web-border); }
 .exchange-row.head { border-top: 0; color: var(--web-text-2); font-size: 12px; }
 .exchange-row.dim { opacity: .6; }
 .exchange-row .num { text-align: right; font-variant-numeric: tabular-nums; }

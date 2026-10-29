@@ -4,17 +4,26 @@ import { useGame } from "./game/store";
 import { applySettings, useSettings } from "./os/settingsStore";
 import { playSound } from "./os/sound";
 import { Stage } from "./os/stage";
-import { BootScreen } from "./screens/BootScreen";
+import { BootScreen, LockScreen, ShutdownScreen } from "./screens/BootScreen";
+import { useShell } from "./os/shellStore";
+import { useT } from "./i18n";
 import { SignInScreen } from "./screens/SignInScreen";
+import { SetupScreen } from "./screens/SetupScreen";
 import { DesktopScreen } from "./screens/DesktopScreen";
+import "./game/appsdk/jobs"; // download / compile job handlers, before the save's offline tick
+import "./os/userApps";
 
-type Phase = "boot" | "signin" | "desktop";
+type Phase = "boot" | "lock" | "signin" | "desktop";
 
 export default function App() {
   const loaded = useGame((s) => s.loaded);
+  /** A new game goes through first-run setup instead of the lock and sign-in screens. */
+  const needsSetup = useGame((s) => s.loaded && s.game.setupDone === false);
   const accent = useSettings((s) => s.accent);
   const reduceMotion = useSettings((s) => s.reduceMotion);
   const [phase, setPhase] = useState<Phase>("boot");
+  const { shuttingDown, poweredOff, powerOn } = useShell();
+  const t = useT();
 
   useEffect(() => {
     startGame();
@@ -43,8 +52,24 @@ export default function App() {
 
   return (
     <Stage>
-      {phase === "boot" || !loaded ? (
-        <BootScreen onDone={() => setPhase((p) => (p === "boot" ? "signin" : p))} />
+      {shuttingDown ? (
+        <ShutdownScreen />
+      ) : poweredOff ? (
+        <div
+          className="powered-off"
+          onClick={() => {
+            powerOn();
+            setPhase("boot");
+          }}
+        >
+          <span className="t-caption c-tertiary">{t("desktop.powerOn")}</span>
+        </div>
+      ) : phase === "boot" || !loaded ? (
+        <BootScreen onDone={() => setPhase((p) => (p === "boot" ? "lock" : p))} />
+      ) : needsSetup ? (
+        <SetupScreen onDone={() => setPhase("desktop")} />
+      ) : phase === "lock" ? (
+        <LockScreen onDone={() => setPhase("signin")} />
       ) : phase === "signin" ? (
         <SignInScreen onSignIn={() => setPhase("desktop")} />
       ) : (

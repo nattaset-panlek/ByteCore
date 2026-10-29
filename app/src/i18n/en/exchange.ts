@@ -8,6 +8,7 @@ export default {
   "exchange.col.file": "File",
   "exchange.col.source": "Source",
   "exchange.col.tier": "Tier",
+  "exchange.col.rarity": "Rarity",
   "exchange.col.value": "Value",
   "exchange.col.status": "Status",
   "exchange.tier": "Tier {tier}",

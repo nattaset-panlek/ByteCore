@@ -7,11 +7,15 @@ import { ChimeraKit } from "./ChimeraKit";
 import { Contracts } from "./Contracts";
 import { TaskManager } from "./taskmgr/TaskManager";
 import { ScriptEditor } from "./scriptEditor/ScriptEditor";
+import { TextEditor } from "./textEditor/TextEditor";
+import { PdfReader } from "./pdfReader/PdfReader";
 import { Profile } from "./Profile";
 import { FileExplorer } from "./FileExplorer";
 import { RigManager } from "./RigManager";
 import { RigStock } from "./RigStock";
 import { Wallet } from "./Wallet";
+import { Installer } from "./userApp/Installer";
+import { UserAppHost } from "./userApp/UserAppHost";
 import "./apps.css";
 import "./browser/browser.css";
 
@@ -27,6 +31,12 @@ export const APP_COMPONENTS: Record<AppId, ComponentType> = {
   profile: Profile,
   settings: SettingsApp,
   scriptEditor: ScriptEditor,
+  textEditor: TextEditor,
+  pdfReader: PdfReader,
   contracts: Contracts,
   chimeraKit: ChimeraKit,
+  installer: Installer,
 };
+
+/** Window content for an app id; installed player apps (`user.<id>`) share the sandbox host. */
+export const appComponent = (id: AppId): ComponentType => APP_COMPONENTS[id] ?? UserAppHost;

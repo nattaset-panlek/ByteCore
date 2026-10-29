@@ -1,0 +1,165 @@
+// ==XeaApp==
+// @name        Breakout
+// @id          breakout
+// @version     1.4.0
+// @author      brickhaus
+// @description Paddle, ball, bricks. Mouse or arrow keys. Five levels and a top-5 score table.
+// @icon        🧱
+// @color       #0e7490
+// @width       640
+// @height      540
+// ==/XeaApp==
+
+const W = 600, H = 460;
+const ROW_COLORS = ["#ff99a4", "#fcb35a", "#fce100", "#6ccb5f", "#60cdff", "#d3a6ff"];
+const LEVELS = [
+  ["............", "xxxxxxxxxxxx", "xxxxxxxxxxxx", "xxxxxxxxxxxx"],
+  ["x.x.x.x.x.x.", ".x.x.x.x.x.x", "x.x.x.x.x.x.", ".x.x.x.x.x.x", "xxxxxxxxxxxx"],
+  ["xxxxxxxxxxxx", "x..........x", "x.xxxxxxxx.x", "x.x......x.x", "x.xxxxxxxx.x", "xxxxxxxxxxxx"],
+  ["..xx....xx..", ".xxxx..xxxx.", "xxxxxxxxxxxx", "xxxxxxxxxxxx", ".xxxxxxxxxx.", "..xxxxxxxx.."],
+  ["xxxxxxxxxxxx", "xxxxxxxxxxxx", "xxxxxxxxxxxx", "xxxxxxxxxxxx", "xxxxxxxxxxxx", "xxxxxxxxxxxx"],
+];
+
+xea.style(`
+  #app { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; }
+  canvas { background: #121212; border-radius: 8px; border: 1px solid var(--stroke); cursor: none; }
+  .hud { display: flex; gap: 24px; font-variant-numeric: tabular-nums; }
+`);
+
+const canvas = xea.el("canvas", { width: W, height: H });
+const ctx = canvas.getContext("2d");
+const hudEl = xea.el("div", { className: "hud" });
+document.getElementById("app").append(hudEl, canvas);
+
+let scores = await xea.storage.get("scores", []);
+const me = await xea.player();
+const keys = {};
+let level, lives, score, bricks, ball, paddle, state;
+
+function loadLevel(n) {
+  level = n;
+  bricks = [];
+  const bw = W / 12;
+  LEVELS[n].forEach((row, r) =>
+    [...row].forEach((ch, c) => {
+      if (ch === "x") bricks.push({ x: c * bw + 2, y: 50 + r * 22, w: bw - 4, h: 18, color: ROW_COLORS[r % ROW_COLORS.length], hp: n >= 3 && r < 2 ? 2 : 1 });
+    }),
+  );
+  serve();
+}
+
+function serve() {
+  paddle = paddle ?? { x: W / 2 - 50, y: H - 24, w: 100, h: 10 };
+  ball = { x: W / 2, y: H - 40, vx: 3.2 + level * 0.4, vy: -(3.6 + level * 0.4), r: 6, stuck: true };
+}
+
+function newGame() {
+  lives = 3;
+  score = 0;
+  state = "play";
+  paddle = null;
+  loadLevel(0);
+}
+
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  paddle.x = Math.max(0, Math.min(W - paddle.w, e.clientX - rect.left - paddle.w / 2));
+});
+canvas.addEventListener("click", () => (state === "play" ? (ball.stuck = false) : newGame()));
+addEventListener("keydown", (e) => {
+  keys[e.code] = true;
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (state === "play") ball.stuck = false;
+    else newGame();
+  }
+});
+addEventListener("keyup", (e) => (keys[e.code] = false));
+
+async function finish(won) {
+  state = won ? "won" : "over";
+  scores = [...scores, { name: me.name, score, at: Date.now() }].sort((a, b) => b.score - a.score).slice(0, 5);
+  await xea.storage.set("scores", scores);
+  if (scores[0].score === score && score > 0) xea.notify("Breakout", `Top score: ${score}`);
+}
+
+function update() {
+  if (state !== "play") return;
+  if (keys.ArrowLeft) paddle.x = Math.max(0, paddle.x - 7);
+  if (keys.ArrowRight) paddle.x = Math.min(W - paddle.w, paddle.x + 7);
+  if (ball.stuck) {
+    ball.x = paddle.x + paddle.w / 2;
+    ball.y = paddle.y - ball.r - 1;
+    return;
+  }
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+  if (ball.x < ball.r || ball.x > W - ball.r) ball.vx *= -1;
+  if (ball.y < ball.r) ball.vy *= -1;
+  const onPaddle = ball.y > paddle.y - ball.r && ball.y < paddle.y + paddle.h && ball.x > paddle.x && ball.x < paddle.x + paddle.w;
+  if (onPaddle && ball.vy > 0) {
+    const hit = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+    const speed = Math.hypot(ball.vx, ball.vy);
+    ball.vx = speed * Math.sin(hit * 1.1);
+    ball.vy = -Math.abs(speed * Math.cos(hit * 1.1));
+  }
+  for (const b of bricks) {
+    if (b.hp <= 0) continue;
+    if (ball.x > b.x - ball.r && ball.x < b.x + b.w + ball.r && ball.y > b.y - ball.r && ball.y < b.y + b.h + ball.r) {
+      b.hp--;
+      score += b.hp === 0 ? 50 : 20;
+      ball.vy *= -1;
+      break;
+    }
+  }
+  if (bricks.every((b) => b.hp <= 0)) {
+    if (level + 1 < LEVELS.length) loadLevel(level + 1);
+    else finish(true);
+  }
+  if (ball.y > H + 20) {
+    lives--;
+    if (lives <= 0) finish(false);
+    else serve();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  for (const b of bricks) {
+    if (b.hp <= 0) continue;
+    ctx.globalAlpha = b.hp > 1 ? 1 : 0.85;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.textAlign = "center";
+  if (state !== "play") {
+    ctx.fillStyle = "#000000c0";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#fff";
+    ctx.font = "600 26px Segoe UI";
+    ctx.fillText(state === "won" ? "You cleared every level!" : "Game over", W / 2, 120);
+    ctx.font = "15px Segoe UI";
+    scores.forEach((s, i) => ctx.fillText(`${i + 1}. ${s.name}  ${s.score}`, W / 2, 170 + i * 24));
+    ctx.fillText("Click or press Space to play again", W / 2, 320);
+  } else if (ball.stuck) {
+    ctx.fillStyle = "#c5c5c5";
+    ctx.font = "14px Segoe UI";
+    ctx.fillText(`Level ${level + 1}: click or Space to launch`, W / 2, H / 2 + 60);
+  }
+  hudEl.textContent = `Level ${level + 1}/${LEVELS.length}   Score ${score}   Lives ${"♥".repeat(Math.max(0, lives))}`;
+}
+
+function frame() {
+  update();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+newGame();
+frame();

@@ -19,20 +19,26 @@ import {
 import { getModel } from "./catalog";
 import { advanceContracts, refillContracts } from "./contracts";
 import { moduleBonus, moduleFile, moduleForTier, MODULE_SLOTS, MODULES } from "./modules";
-import { emit, type GameEvent } from "./events";
+import { emit, type GameEvent, type JobOutcome } from "./events";
 import { crackChance, jobDone, jobDuration, jobLoad, type JobRequest } from "./jobs";
 import { addTxn, tick } from "./loop";
 import { makeHost, scanTiers } from "./network";
 import { diskCapacityMB, resellPrice, rigStats } from "./rig";
 import { bailAmount, newGame, uid, type GameState } from "./state";
 import { msg, type Msg, type TKey, type Vars } from "../i18n";
-import type { FileNode, Host, Job, JobKind, Part, Txn } from "./types";
+import type { DirNode, FileNode, Host, Job, JobKind, Part, Txn } from "./types";
 import * as vfs from "./vfs";
 
 /** Failed actions carry a translatable message (show it with tm(r.error)). */
 export type Result = { ok: true } | { ok: false; error: Msg };
 const OK: Result = { ok: true };
 const fail = (key: TKey, vars?: Vars): Result => ({ ok: false, error: msg(key, vars) });
+
+/** Finishers for jobs owned outside the store (download / compile, see game/appsdk/jobs.ts). */
+const jobHandlers: Partial<Record<JobKind, (job: Job) => JobOutcome>> = {};
+export function registerJobHandler(kind: JobKind, fn: (job: Job) => JobOutcome) {
+  jobHandlers[kind] = fn;
+}
 
 interface GameStore {
   game: GameState;
@@ -68,6 +74,10 @@ interface GameStore {
   disconnect: () => void;
   pull: (remotePath: string, destDir?: string) => Result;
   killJob: (id: number) => void;
+  /** Start a job with a known duration whose result a registered handler applies (download, compile). */
+  startTimedJob: (kind: JobKind, extra: Partial<Job>, ms: number) => Job;
+  /** Change a running job's finish time (a download once its size is known). */
+  retimeJob: (id: number, ms: number) => void;
 
   /** Sell loot files on the drive (GDD 3.4.1). Each hash sells once; copies then show ₵ 0. */
   sellData: (paths: string[]) => Result;
@@ -87,6 +97,8 @@ interface GameStore {
   payBail: (useDebt: boolean) => Result;
   /** Give up at a warrant and go to prison. */
   surrender: () => void;
+  /** First-run setup: the player's handle, written into their starter documents too. */
+  completeSetup: (name: string) => void;
   /** Prison paperwork sheet result: correct cuts the sentence, wrong adds a little. */
   paperwork: (correct: boolean) => void;
   /** One-shot jailbreak: success frees you, failure doubles the remaining sentence. */
@@ -97,6 +109,8 @@ interface GameStore {
   // Files (capacity checked against the installed storage)
   writeFile: (path: string, f: Omit<FileNode, "type" | "name" | "modified">) => Result;
   mkdir: (path: string) => Result;
+  /** Put the drive back to an earlier snapshot (File Explorer Undo). */
+  restoreFs: (root: DirNode) => void;
   remove: (path: string) => Result;
   copy: (from: string, to: string) => Result;
   move: (from: string, to: string) => Result;
@@ -175,6 +189,11 @@ export const useGame = create<GameStore>((set, get) => {
 
   /** Apply a finished job's effect and emit its outcome for the Terminal. */
   const completeJob = (job: Job) => {
+    const handler = jobHandlers[job.kind];
+    if (handler) {
+      emit({ type: "jobComplete", job, outcome: handler(job) });
+      return;
+    }
     if (job.kind === "scan") {
       const g = get().game;
       const tiers = scanTiers(g.player.level);
@@ -234,7 +253,7 @@ export const useGame = create<GameStore>((set, get) => {
         emit({ type: "jobComplete", job, outcome: { ...outcomeBase, ok: false, error: msg("err.remoteFileNotFound", { name: job.remotePath! }) } });
         return;
       }
-      const destDir = job.destDir ?? "C:/loot";
+      const destDir = job.destDir ?? vfs.DOWNLOADS_DIR;
       get().mkdir(destDir);
       const dirNode = vfs.getNode(get().game.fs, destDir);
       let name = node.name;
@@ -425,7 +444,7 @@ export const useGame = create<GameStore>((set, get) => {
       emit({ type: "sessionEnded", ip, reason: "disconnect" });
     },
 
-    pull: (remotePath, destDir = "C:/loot") => {
+    pull: (remotePath, destDir = vfs.DOWNLOADS_DIR) => {
       const g = get().game;
       const s = g.net.session;
       if (!s) return fail("err.notConnected");
@@ -437,6 +456,19 @@ export const useGame = create<GameStore>((set, get) => {
     },
 
     killJob: (id) => patch({ jobs: get().game.jobs.filter((j) => j.id !== id) }),
+
+    startTimedJob: (kind, extra, ms) => {
+      const g = get().game;
+      const t = now();
+      const job: Job = { id: g.nextJob, kind, label: kind, startedAt: t, endsAt: t + ms, load: jobLoad(kind), ...extra };
+      patch({ jobs: [...g.jobs, job], nextJob: g.nextJob + 1 });
+      return job;
+    },
+
+    retimeJob: (id, ms) => {
+      const t = now();
+      patch({ jobs: get().game.jobs.map((j) => (j.id === id ? { ...j, startedAt: t, endsAt: t + ms } : j)) });
+    },
 
     sellData: (paths) => {
       const g = get().game;
@@ -546,8 +578,21 @@ export const useGame = create<GameStore>((set, get) => {
 
     newIdentity: () => get().reset(),
 
+    completeSetup: (name) => {
+      const g = get().game;
+      let fs = g.fs;
+      for (const p of vfs.NAMED_DOCS) {
+        const n = vfs.getNode(fs, p);
+        if (n?.type !== "file" || !n.content) continue;
+        const r = vfs.writeFile(fs, p, { ...n, content: n.content.replace(/\bghost_user\b/g, name) });
+        if (r.ok) fs = r.root;
+      }
+      patch({ player: { ...g.player, name }, setupDone: true, fs });
+    },
+
     writeFile: (path, f) => applyFs(vfs.writeFile(get().game.fs, path, { ...f, modified: now() })),
     mkdir: (path) => applyFs(vfs.mkdir(get().game.fs, path)),
+    restoreFs: (root) => patch({ fs: root }),
     remove: (path) => applyFs(vfs.remove(get().game.fs, path)),
     copy: (from, to) => applyFs(vfs.copy(get().game.fs, from, to)),
     move: (from, to) => applyFs(vfs.move(get().game.fs, from, to)),
@@ -555,6 +600,12 @@ export const useGame = create<GameStore>((set, get) => {
 });
 
 /** Disk usage of the player's drive, in MB. */
-export function diskUsage(g: GameState): { used: number; total: number } {
+export function diskUsage(g: Pick<GameState, "fs" | "rig">): { used: number; total: number } {
   return { used: vfs.sizeOf(g.fs), total: diskCapacityMB(g.rig) };
+}
+
+/** How long pulling a file of this size would take on the current rig (ms), for File Explorer. */
+export function pullEstimate(g: Pick<GameState, "rig" | "modules">, sizeMB: number): number {
+  const s = rigStats(g.rig);
+  return jobDuration({ kind: "pull", size: sizeMB }, { ...s, netMbps: s.netMbps * (1 + moduleBonus(g.modules).net) });
 }

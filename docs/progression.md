@@ -47,4 +47,4 @@ Real controls over the Settings layout:
 ## First-run tutorial & lore
 
 - `os/useTutorial.ts` shows a short sequence of guiding toasts on a genuinely fresh game, once per device (`tutorialSeen` in settings; a module guard survives React StrictMode).
-- The starter drive (`vfs.ts` `starterDrive`) seeds `Documents/readme.txt`, `getting-started.txt` (every command), a `message-from-chimera.txt` story hook, and `Scripts/example.js`. Targets also carry their own lore files (`network.ts` `LORE`).
+- The starter drive (`vfs.ts` `starterDrive`) seeds `Documents/readme.txt`, the `how-to-play.pdf` and `getting-started.pdf` manuals (`manuals.ts`, opened in PDF Reader), a `message-from-chimera.txt` story hook, and `Scripts/example.js`. Targets also carry their own lore files (`network.ts` `LORE`).

@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { APPS, APP_ORDER, appName } from "./apps";
+import { APPS, APP_ORDER, appName, type AppId } from "./apps";
+import { startMenuApps, useUserApps } from "./userApps";
+import { userAppMenu } from "../apps/userApp/AppsPage";
 import { useWindows } from "./windowStore";
 import { useShell } from "./shellStore";
 import { openContextMenu } from "./contextMenu";
 import { Icon, TextBox } from "../ui";
 import { useT } from "../i18n";
+import { useGame } from "../game/store";
 
 /** Start flyout: search, pinned app grid, user and power button. */
 export function StartMenu() {
   const t = useT();
   const { startOpen, startQuery, setStart, shutDown } = useShell();
+  const playerName = useGame((s) => s.game.player.name);
   const open = useWindows((s) => s.open);
+  const userApps = useUserApps();
   const [query, setQuery] = useState("");
   const [powerOpen, setPowerOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -36,8 +41,8 @@ export function StartMenu() {
   if (!startOpen) return null;
 
   const q = query.trim().toLowerCase();
-  const apps = APP_ORDER.filter((id) => appName(id).toLowerCase().includes(q));
-  const launch = (id: (typeof APP_ORDER)[number]) => {
+  const apps = [...APP_ORDER, ...startMenuApps(userApps)].filter((id) => appName(id).toLowerCase().includes(q));
+  const launch = (id: AppId) => {
     open(id);
     setStart(false);
   };
@@ -57,7 +62,7 @@ export function StartMenu() {
         </div>
         <div className="start-grid">
           {apps.map((id) => (
-            <button type="button" key={id} className="start-app" onClick={() => launch(id)} onContextMenu={(e) => openContextMenu(e, [{ label: t("ctx.open"), icon: APPS[id].icon, onClick: () => launch(id) }])}>
+            <button type="button" key={id} className="start-app" onClick={() => launch(id)} onContextMenu={(e) => openContextMenu(e, [{ label: t("ctx.open"), icon: APPS[id].icon, onClick: () => launch(id) }, ...userAppMenu(id)])}>
               <Icon name={APPS[id].icon} size={32} />
               <span className="t-caption">{appName(id)}</span>
             </button>
@@ -67,8 +72,8 @@ export function StartMenu() {
       </div>
       <div className="start-footer">
         <button type="button" className="start-user" onClick={() => launch("profile")}>
-          <span className="person">GU</span>
-          <span className="t-caption">ghost_user</span>
+          <span className="person">{playerName.slice(0, 2).toUpperCase()}</span>
+          <span className="t-caption">{playerName}</span>
         </button>
         <div className="start-power">
           <button type="button" className="icon-btn" style={{ width: 40, height: 40 }} aria-label={t("start.power")} onClick={() => setPowerOpen(!powerOpen)}>

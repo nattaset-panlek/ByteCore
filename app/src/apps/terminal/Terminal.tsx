@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { onGameEvent } from "../../game/events";
+import { jobProgress } from "../../game/jobs";
 import { useGame } from "../../game/store";
 import { useT } from "../../i18n";
 import { openContextMenu, separator } from "../../os/contextMenu";
@@ -17,16 +18,17 @@ interface Shell {
 
 const REMOTE = -1;
 let shellSeq = 0;
-const newLocal = (welcome: string): Shell => ({ id: ++shellSeq, scope: "local", lines: [{ text: welcome, tone: "muted" }], cwd: LOCAL_HOME });
+const newLocal = (welcome: string, cwd = LOCAL_HOME): Shell => ({ id: ++shellSeq, scope: "local", lines: [{ text: welcome, tone: "muted" }], cwd });
 
 /** Terminal (GDD 3.1): any number of Local shell tabs, plus a Remote session tab while connected. */
 export function Terminal() {
   const t = useT();
-  useWindow();
+  const { win } = useWindow();
   const session = useGame((s) => s.game.net.session);
   const connected = !!session;
 
-  const [shells, setShells] = useState<Shell[]>(() => [newLocal(t("terminal.welcome"))]);
+  // Launch arg `cwd` (File Explorer > Open in Terminal) starts the first shell in that folder.
+  const [shells, setShells] = useState<Shell[]>(() => [newLocal(t("terminal.welcome"), win.args?.cwd)]);
   const [activeId, setActiveId] = useState(shells[0].id);
   const [input, setInput] = useState("");
   const history = useRef<string[]>([]);
@@ -37,6 +39,18 @@ export function Terminal() {
   const jobTab = useRef(new Map<number, number>());
 
   const shell = shells.find((s) => s.id === activeId) ?? shells[0];
+
+  // Like a real console: while a command started in this tab is running, the prompt is replaced by its
+  // progress and typing waits. Ctrl+C stops it.
+  const jobs = useGame((s) => s.game.jobs);
+  const running = jobs.filter((j) => jobTab.current.get(j.id) === shell.id);
+  const busy = running.length > 0;
+  const [, setPulse] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const id = window.setInterval(() => setPulse((n) => n + 1), 200);
+    return () => window.clearInterval(id);
+  }, [busy]);
   const update = (id: number, fn: (s: Shell) => Shell) => setShells((all) => all.map((s) => (s.id === id ? fn(s) : s)));
 
   // Follow the session: open/focus the remote tab when connecting, drop it when the session ends.
@@ -65,11 +79,11 @@ export function Terminal() {
           jobTab.current.delete(e.job.id);
           setShells((all) => {
             const id = all.some((s) => s.id === target) ? target! : all.find((s) => s.scope === "local")!.id;
-            return all.map((s) => (s.id === id ? { ...s, lines: [...s.lines, ...lines] } : s));
+            return all.map((s) => (s.id === id ? { ...s, lines: keep([...s.lines, ...lines]) } : s));
           });
         } else if (e.type === "traced") {
           const line: OutLine = { text: t("terminal.traced.line", { ip: e.ip }), tone: "err" };
-          setShells((all) => all.map((s) => (s.scope === "local" ? { ...s, lines: [...s.lines, line] } : s)));
+          setShells((all) => all.map((s) => (s.scope === "local" ? { ...s, lines: keep([...s.lines, line]) } : s)));
         }
       }),
     [t]
@@ -113,10 +127,21 @@ export function Terminal() {
       update(shell.id, (s) => ({ ...s, lines: [] }));
       return;
     }
-    update(shell.id, (s) => ({ ...s, lines: [...s.lines, echo, ...out.lines], cwd: out.cwd ?? s.cwd }));
+    update(shell.id, (s) => ({ ...s, lines: keep([...s.lines, echo, ...out.lines]), cwd: out.cwd ?? s.cwd }));
   };
 
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (busy) {
+      e.preventDefault();
+      if (e.key === "c" && e.ctrlKey) {
+        running.forEach((j) => {
+          jobTab.current.delete(j.id);
+          useGame.getState().killJob(j.id);
+        });
+        update(shell.id, (s) => ({ ...s, lines: keep([...s.lines, { text: "^C", tone: "muted" }]) }));
+      }
+      return;
+    }
     if (e.key === "Enter") submit();
     else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -172,12 +197,19 @@ export function Terminal() {
         }
       >
         <div className="term-view" ref={viewRef}>
-          {shell.lines.map((l, i) => (
-            <div key={i} className={`term-line ${l.tone ? `tone-${l.tone}` : ""}`}>
-              {l.text || " "}
-            </div>
-          ))}
-          <div className="term-input-row">
+          <TermLines lines={shell.lines} />
+          {busy &&
+            running.map((j) => {
+              const pct = Math.max(0, Math.min(1, jobProgress(j, Date.now())));
+              const filled = Math.round(pct * 24);
+              return (
+                <div key={j.id} className="term-line tone-muted">
+                  {`${j.kind}${j.target ? ` ${j.target}` : ""} [${"#".repeat(filled)}${"-".repeat(24 - filled)}] ${Math.round(pct * 100)}%`}
+                </div>
+              );
+            })}
+          {busy && <div className="term-line tone-muted">{t("terminal.busyHint")}</div>}
+          <div className={`term-input-row ${busy ? "busy" : ""}`}>
             <span className="term-prompt">{promptFor(shell.scope, shell.cwd)}</span>
             <input
               ref={inputRef}
@@ -185,7 +217,7 @@ export function Terminal() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKey}
-              placeholder={t("terminal.input")}
+              placeholder={busy ? "" : t("terminal.input")}
               autoFocus
               spellCheck={false}
               autoComplete="off"
@@ -196,3 +228,20 @@ export function Terminal() {
     </>
   );
 }
+
+/** Scrollback kept per tab, like a real console buffer. */
+const MAX_LINES = 1000;
+const keep = <T,>(lines: T[]) => (lines.length > MAX_LINES ? lines.slice(-MAX_LINES) : lines);
+
+/** The output history. Memoized so the job progress pulse (5x a second) only redraws the progress line. */
+const TermLines = memo(function TermLines({ lines }: { lines: { text: string; tone?: string }[] }) {
+  return (
+    <>
+      {lines.map((l, i) => (
+        <div key={i} className={`term-line ${l.tone ? `tone-${l.tone}` : ""}`}>
+          {l.text || " "}
+        </div>
+      ))}
+    </>
+  );
+});

@@ -1,0 +1,22 @@
+/* Text Editor (Figma Window/Text Editor): tab row, menu + format bar on bg/layer, plain mono page. */
+.te { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.te-bar { display: flex; align-items: center; height: 44px; flex: none; padding: 0 8px; background: var(--bg-layer); border-bottom: 1px solid var(--stroke-divider); }
+.te-menus, .te-format, .te-end { display: flex; align-items: center; gap: 2px; }
+.te-menus, .te-end { flex: 1; }
+.te-end { justify-content: flex-end; }
+.te-menu, .te-btn { display: flex; align-items: center; justify-content: center; gap: 4px; height: 32px; min-width: 32px; padding: 0 10px; background: none; border: 0; border-radius: var(--r-control); color: var(--text-primary); font: 400 14px/20px var(--font); }
+.te-btn { padding: 0 8px; }
+.te-menu:hover, .te-btn:hover { background: var(--subtle-hover); }
+.te-menu:active, .te-btn:active { background: var(--subtle-pressed); }
+.te-btn.b { font-weight: 700; }
+.te-btn.i { font-style: italic; }
+.te-btn.s { text-decoration: line-through; }
+.te-drop img { opacity: 0.8; }
+.te-sep { width: 1px; height: 20px; margin: 0 6px; background: var(--stroke-divider); }
+
+.te-page { flex: 1; min-height: 0; display: flex; background: var(--bg-solid-secondary); }
+.te-text { flex: 1; min-width: 0; padding: 16px 8px 16px 24px; background: transparent; border: 0; outline: 0; resize: none; color: var(--text-primary); font-family: var(--mono); tab-size: 4; user-select: text; }
+.te-text::selection { background: #3b78ff66; }
+
+.te-status { display: flex; align-items: center; gap: 16px; height: 24px; flex: none; padding: 0 12px; color: var(--text-secondary); border-top: 1px solid var(--stroke-divider); }
+.te-notice { color: var(--text-tertiary); }

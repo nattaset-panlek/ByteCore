@@ -1,0 +1,215 @@
+%XPDF title=Xea App SDK Reference
+# Xea App SDK
+Reference v1. Write your own apps (and games) for Xea OS in JavaScript. An app is **one** text file with the extension `.xjs`. You compile it in the IDE, run the Setup it produces, and the app appears in Start like any other program.
+
+## Contents
+1. Quick start
+2. The .xjs file format
+3. Build pipeline: get → compile → install → run
+4. API reference (the `xea` object)
+5. Built-in styles
+6. The sandbox
+7. Limits
+8. Errors and troubleshooting
+9. Examples
+
+> A ready-made starter is in this folder: **hello.xjs**
+
+---page
+
+## 1. Quick start
+1. Open IDE, File > New, and save the file as `C:/Scripts/clock.xjs`
+2. Paste:
+```
+// ==XeaApp==
+// @name    Clock
+// @icon    ⏰
+// @width   320
+// @height  160
+// ==/XeaApp==
+const face = xea.el("h1", { style: { padding: "24px" } });
+document.getElementById("app").append(face);
+setInterval(() => (face.textContent = new Date().toLocaleTimeString()), 500);
+```
+3. Press **Run** (Ctrl+Enter). For .xjs files Run means **compile**. The console shows a progress bar and the time left.
+4. When the build finishes, `C:/Scripts/.install_clock.exe` appears next to the source. Press **Run Setup** (or double-click the .exe in File Explorer).
+5. Next > accept the licence > Install > Finish. Open Clock from Start.
+
+## 2. The .xjs file format
+An .xjs file is a manifest header followed by JavaScript. The header must be the first thing in the file, and every line is a comment:
+```
+// ==XeaApp==
+// @name         Snake            (required)
+// @id           snake            optional, default: slug of @name
+// @version      1.0.0            optional, default 1.0.0
+// @author       ghost_user       optional
+// @description  Eat. Grow.       optional, shown in Setup
+// @icon         🐍               optional, see below
+// @color        #f5c518          optional, icon tile colour
+// @width        460              optional, 240..1600, default 640
+// @height       520              optional, 180..1000, default 480
+// ==/XeaApp==
+```
+
+### Field rules
+| Field | Rule |
+| `@name` | 1-40 characters. Shown in Start, the taskbar and the title bar. |
+| `@id` | Letters, digits and dashes. A new build with the same id **upgrades** the installed app and keeps its storage and files. Change the id and you get a second app. |
+| `@version` | Numbers separated by dots: 1, 1.2, 1.2.3, 1.2.3.4 |
+| `@icon` | One emoji or 1-2 letters, drawn on a rounded tile in @color. You may also name a built-in icon: icon/globe, icon/database, icon/wallet, icon/folder, icon/table, app/Terminal ... |
+| `@color` | Pick a tile colour that contrasts with your emoji. Letters switch to white or dark ink on their own and emoji get a thin outline. |
+| `@width` / `@height` | The size of your page inside the window (title bar not counted). |
+
+### The code
+Everything after `// ==/XeaApp==` is your program. It runs once when the window opens, inside an async function, so you can use `await` at the top level. The page starts empty except for `<div id="app"></div>`.
+
+Use the normal browser APIs: document, canvas, setTimeout, setInterval, requestAnimationFrame, addEventListener("keydown", ...), Math, JSON. The SDK is available as the global `xea`.
+
+---page
+
+## 3. Build pipeline
+### Get the source
+- Write it yourself in the IDE (save it with the .xjs extension).
+- Download it in Terminal with `wget <url> [folder]` (`curl` works the same). Files go to `C:/Users/ghost_user/Downloads` unless you name a folder.
+- In-game addresses look like `core://soft/dl/<file>`, for example `wget core://soft/dl/snake.xjs`.
+- Real web addresses work too if the server allows browser downloads (CORS), for example raw GitHub files: `wget https://raw.githubusercontent.com/<user>/<repo>/main/app.xjs`
+- Browse Xea Soft (Browser > core://soft) for free and paid apps.
+- Import a file from your real computer: `import` in Terminal, or right-click in File Explorer / on the desktop > Import from PC...
+
+> Downloads are limited to 1 MB. A download is a job: the prompt waits, Ctrl+C cancels, `jobs` lists it and Task Manager shows it.
+
+### Compile
+Open the .xjs (double-click it) and press Run. The build is a job that keeps going if you close the IDE; a toast tells you when it is done. Compile time depends on the code and your CPU:
+```
+base  = 2 + characters / 800 + functions * 0.6 + depth² * 0.5   (s)
+speed = clamp( sqrt(cpu / 1.6), 1, 4 )                cpu = GHz x cores
+time  = min( 290, base / speed )                      seconds
+```
+- **functions** = `function` keywords + `=>` arrows + method definitions
+- **depth** = the deepest { } nesting in the code
+
+A small app takes a few seconds, a big game a minute or two. It never takes 5 minutes. A faster CPU builds faster, and flat code builds faster than deeply nested code. Header mistakes fail at once; a syntax error fails part-way through the build with the error message.
+
+### Install
+The build writes `.install_<id>.exe` in the same folder as the source. Double-click it to start Setup: Welcome → Licence & options → Installing → Finish. Options: desktop shortcut, Start menu, pin to taskbar. The app is installed to `C:/Program Files/<name>/` (the .exe and a data folder for the app's own files).
+
+### Run, pin, uninstall
+Start menu, desktop shortcut (.lnk) or taskbar. Right-click an app in Start or on the taskbar for Pin / Unpin / Add desktop shortcut / Uninstall. Settings > Apps lists every installed app. Installed apps are part of your save game.
+
+---page
+
+## 4. API reference
+Every method that talks to Xea OS returns a Promise: use `await`. A failed call rejects with an Error whose message says why.
+
+### xea.app
+Read-only info about your app:
+```
+{ id: "snake", name: "Snake", version: "1.0.3", author: "pix3l" }
+```
+
+### xea.window
+| Method | Description |
+| `setTitle(title): Promise<void>` | Changes the window's title bar text (max 80 characters). |
+| `close(): Promise<void>` | Closes your window. |
+
+### xea.storage
+A small key/value store for settings and high scores. Values can be any JSON value. It survives restarts and upgrades and is saved with the game. Total limit: 256 KB per app.
+| Method | Description |
+| `get(key, fallback?)` | The stored value, or `fallback` (default null) when the key is unset. |
+| `set(key, value)` | Stores a value. |
+| `remove(key)` | Deletes a key. |
+| `keys()` | All keys, as a string array. |
+```
+let best = await xea.storage.get("best", 0);
+await xea.storage.set("settings", { sound: true, speed: 2 });
+```
+
+### xea.fs
+Text files in your app's own folder, `C:/Program Files/<name>/data/`. Paths are relative to that folder ("saves/slot1.json"); you cannot reach files outside it and ".." is rejected. The player can see these files in File Explorer.
+| Method | Description |
+| `list(path = "")` | `{ name, type: "file" or "dir", size }[]` |
+| `read(path)` | The file's text. Rejects with "file not found" when missing. |
+| `write(path, text)` | Creates or overwrites; missing parent folders are created. Max 1 MB per file; the rig's disk must have room. |
+| `mkdir(path)` | Creates a folder. |
+| `remove(path)` | Deletes a file or a folder (and everything in it). |
+| `exists(path)` | true or false. |
+
+---page
+
+### Notifications and info
+| Method | Description |
+| `xea.notify(title, message?)` | Shows a Xea OS toast with your app's icon. At most one every 1.5 s; faster calls reject with "too many notifications". |
+| `xea.player()` | `{ name, level, balance, heat }`, read-only. Apps cannot spend credits or touch the hacking tools. |
+| `xea.log(...values)` | Writes to the developer console of the real browser (F12), prefixed with your app name. |
+| `xea.on(event, handler)` | Reserved for host events in later SDK versions. Today no events are sent; use normal DOM events. |
+
+### Helpers
+`xea.style(css)` adds a `<style>` block to your page and returns it.
+
+`xea.el(tag, props?, ...children)` is a tiny element builder. In props, `on<event>` functions become listeners (onclick, oninput ...), `style` may be an object and other keys set properties or attributes. Children are strings, nodes or arrays; null and false are skipped.
+```
+const btn = xea.el("button", { className: "xea-btn accent", onclick: go }, "Play");
+document.getElementById("app").append(
+  xea.el("div", { style: { padding: "16px" } }, xea.el("h2", {}, "Menu"), btn),
+);
+```
+
+## 5. Built-in styles
+Your page already uses the Xea OS dark theme: Segoe UI, #202020 background, white text.
+| Class | Use |
+| `.xea-btn` | Standard button |
+| `.xea-btn.accent` | Accent (blue) button |
+| `.xea-input` | Text box |
+| `.xea-card` | Rounded card |
+| `.xea-muted` | Secondary text colour |
+
+CSS variables: `--accent` `--text` `--text-2` `--text-3` `--bg` `--card` `--stroke` `--control` `--control-hover` `--success` `--caution` `--critical`
+
+---page
+
+## 6. The sandbox
+Each app runs in its own sandboxed page.
+
+### It can
+- draw anything in its window (DOM, canvas, CSS, animations)
+- read the keyboard and mouse while its window has focus
+- keep data with xea.storage and xea.fs
+- show notifications, change its title, close itself
+
+### It cannot
+- see other files, other apps, the wallet, jobs or the network
+- open real web pages, pop-ups or new windows
+- use cookies, localStorage or IndexedDB (use xea.storage)
+- keep running after its window is closed
+
+> Click inside the window to give it keyboard focus.
+
+## 7. Limits
+| What | Limit |
+| Source / download / imported file | 1 MB |
+| xea.fs.write per file | 1 MB |
+| xea.storage per app | 256 KB |
+| Notifications | 1 per 1.5 s |
+| Window size | 240x180 .. 1600x1000 |
+| Compile time | under 290 s |
+
+## 8. Errors and troubleshooting
+| Message | Fix |
+| Missing '// ==XeaApp==' header on the first line. | The header must come first (blank lines before it are fine). |
+| Header lines look like '// @field value'. | Every line between the markers needs // and @. |
+| Build failed: SyntaxError: ... | Fix the code and Run again. The IDE's Problems tab shows the error while you type. |
+| "App error: ..." strip at the bottom of your window | Your code threw at run time. Click the strip to hide it; xea.log() and the browser console (F12) help find it. |
+| wget: Could not reach the host | The server blocks browser downloads (no CORS), or you are offline. Raw GitHub and gists work. |
+| wget: 402 Payment Required | Paid Xea Soft apps must be bought on core://soft first. |
+| Changes don't show after reinstalling | Keep the same @id (bump @version if you like); close and reopen the app window after Setup finishes. |
+
+## 9. Examples
+On Xea Soft (core://soft), all with readable source:
+| File | Price | Shows |
+| hello.xjs | free | Counter, storage, notify (also in this folder) |
+| notes.xjs | free | Notes app: storage, xea.fs export |
+| snake.xjs | free | Canvas game, keyboard, best score |
+| mines.xjs | paid | DOM grid game, right-click, best times |
+| breakout.xjs | paid | Canvas and mouse, levels, top-5 table |
+
+Download one, open it in the IDE and read it. Change something, compile, reinstall. That's the whole loop.

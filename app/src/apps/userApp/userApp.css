@@ -1,0 +1,44 @@
+/* Installed player apps (UserAppHost) and the setup wizard (Installer). */
+
+.uapp { position: relative; flex: 1; min-height: 0; display: flex; background: var(--bg-solid-base); }
+.uapp-frame { flex: 1; border: 0; width: 100%; height: 100%; display: block; background: var(--bg-solid-base); }
+body.dragging .uapp-frame { pointer-events: none; }
+.uapp-error {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 8px 12px;
+  background: var(--critical-bg); color: var(--text-primary); border: 1px solid var(--stroke-control);
+  border-radius: var(--r-control); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.uapp-missing { padding: 24px; }
+
+.setup { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg-solid-base); }
+.setup-main { flex: 1; min-height: 0; display: flex; }
+.setup-banner {
+  width: 180px; flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 24px 20px; background: var(--bg-solid-secondary); border-right: 1px solid var(--stroke-divider);
+}
+.setup-banner > img { margin-bottom: 12px; }
+.setup-steps { list-style: none; margin: 24px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; color: var(--text-tertiary); }
+.setup-steps li { position: relative; padding-left: 16px; }
+.setup-steps li::before { content: ""; position: absolute; left: 0; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--stroke-surface); }
+.setup-steps li.done { color: var(--text-secondary); }
+.setup-steps li.done::before { background: var(--success); }
+.setup-steps li.on { color: var(--text-primary); font-weight: 600; }
+.setup-steps li.on::before { background: var(--accent); }
+.setup-body { flex: 1; min-width: 0; overflow: auto; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.setup-body h2, .setup-body p { margin: 0; }
+.setup-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--stroke-card); border-radius: var(--r-overlay); }
+.setup-facts span { overflow-wrap: anywhere; }
+.setup-license {
+  height: 120px; overflow: auto; white-space: pre-wrap; padding: 12px; color: var(--text-secondary);
+  background: var(--bg-solid-secondary); border: 1px solid var(--stroke-control); border-radius: var(--r-control);
+}
+.setup-options { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.setup-log { font-family: "Cascadia Mono", Consolas, monospace; }
+.setup-footer { display: flex; gap: 8px; padding: 16px 24px; background: var(--bg-solid-secondary); border-top: 1px solid var(--stroke-divider); }
+.setup-footer .btn { min-width: 96px; }
+
+/* IDE compile panel (CompileStatus) */
+.compile-status { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 8px; }
+.compile-status .compile-row { display: flex; gap: 8px; align-items: center; }
+/* Icons are coloured images: on an accent button they read as a dark smudge, so draw them white. */
+.compile-status .btn-accent img { filter: brightness(0) invert(1); }

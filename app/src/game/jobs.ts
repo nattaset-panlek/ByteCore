@@ -33,13 +33,16 @@ export function jobDuration(req: JobRequest, stats: RigStats): number {
       return Math.max(JOB.crackMinMs, Math.round((sec * tier * JOB.crackK) / cpu));
     }
     case "pull":
+    case "download":
       return Math.max(JOB.pullMinMs, Math.round(((req.size ?? 1) / pullThroughput(stats)) * 1000));
+    case "compile":
+      return JOB.pullMinMs;
   }
 }
 
 /** Rig load a job claims, for the Task Manager graphs (0..1). */
 export function jobLoad(kind: JobKind): number {
-  return kind === "crack" ? 0.8 : kind === "pull" ? 0.5 : 0.3;
+  return kind === "crack" || kind === "compile" ? 0.8 : kind === "pull" || kind === "download" ? 0.5 : 0.3;
 }
 
 export function jobProgress(job: Job, now: number): number {

@@ -6,6 +6,8 @@ import type { JobOutcome } from "../../game/events";
 import type { DirNode, Host } from "../../game/types";
 import * as vfs from "../../game/vfs";
 import { duration, fileSize } from "../common";
+import { startDownload } from "../../game/appsdk/jobs";
+import { pickLocalFiles } from "../userApp/importLocal";
 
 export type Tone = "ok" | "err" | "muted" | "accent" | "warn";
 export interface OutLine {
@@ -28,7 +30,7 @@ const err = (text: string): OutLine => ({ text, tone: "err" });
 
 export const LOCAL_HOME = "C:/Users/ghost_user";
 
-const HELP_ORDER = ["help", "clear", "ls", "cd", "cat", "pwd", "scan", "probe", "crack", "connect", "disconnect", "pull", "jobs", "kill"];
+const HELP_ORDER = ["help", "clear", "ls", "cd", "cat", "pwd", "scan", "probe", "crack", "connect", "disconnect", "pull", "jobs", "kill", "wget", "import"];
 
 /** Resolve a path argument against the shell's cwd, handling "." and "..". */
 function resolve(scope: Scope, cwd: string, arg: string): { parts: string[]; display: string } {
@@ -176,6 +178,24 @@ export function runCommand(raw: string, scope: Scope, cwd: string): CmdOutcome {
       return { lines: [line(t("terminal.kill.ok", { id }), "muted")] };
     }
 
+    case "wget":
+    case "curl": {
+      // wget <url> [dir]  /  curl -o <file> <url> style flags are accepted and ignored
+      const rest = args.filter((a) => !a.startsWith("-"));
+      if (!rest[0]) return { lines: [err(t("terminal.needArg", { cmd, usage: `${cmd} <url> [dir]` }))] };
+      if (scope !== "local") return { lines: [err(t("terminal.localOnly", { cmd }))] };
+      const dest = rest[1] ? resolve("local", cwd, rest[1]).display : undefined;
+      const r = startDownload(rest[0], dest);
+      if (!r.ok) return { lines: [err(tm(r.error))] };
+      return { lines: [line(t("terminal.job.download", { url: rest[0] }), "muted")] };
+    }
+
+    case "import": {
+      if (scope !== "local") return { lines: [err(t("terminal.localOnly", { cmd }))] };
+      pickLocalFiles(cwd);
+      return { lines: [line(t("terminal.import.picking", { dir: cwd }), "muted")] };
+    }
+
     default:
       return { lines: [err(t("terminal.unknownCmd", { cmd }))] };
   }
@@ -203,6 +223,12 @@ export function formatOutcome(o: JobOutcome): OutLine[] {
       return o.ok
         ? [line(t("terminal.pull.ok", { name: o.remotePath.split("/").pop() ?? o.remotePath, size: fileSize(o.size ?? 0), dest: o.dest ?? "" }), "ok")]
         : [line(t("terminal.pull.fail", { error: o.error ? tm(o.error) : "" }), "err")];
+    case "download":
+      return o.ok
+        ? [line(t("terminal.download.ok", { dest: o.dest ?? "", size: fileSize(o.size ?? 0) }), "ok")]
+        : [line(t("terminal.download.fail", { url: o.url, error: o.error ? tm(o.error) : "" }), "err")];
+    case "compile":
+      return o.ok ? [line(t("sdk.compile.ok", { dest: o.dest ?? "" }), "ok")] : [line(t("sdk.compile.fail", { error: o.error ?? "" }), "err")];
   }
 }
 

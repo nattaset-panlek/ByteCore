@@ -1,8 +1,12 @@
 import { create } from "zustand";
 import { APPS, type AppId } from "./apps";
 import { stageSize, useStage } from "./stage";
+import { useSettings } from "./settingsStore";
 
 export const TASKBAR_H = 48;
+
+/** Space the taskbar keeps at the bottom of the stage (none while it auto-hides). */
+export const taskbarReserve = () => (useSettings.getState().taskbar.autoHide ? 0 : TASKBAR_H);
 
 export interface Rect {
   x: number;
@@ -61,7 +65,7 @@ export const useWindows = create<WindowStore>((set, get) => ({
     }
     const n = get().windows.length;
     const { w: vw, h: sh } = stageSize();
-    const vh = sh - TASKBAR_H;
+    const vh = sh - taskbarReserve();
     const w = Math.min(app.size[0], vw - 40);
     const h = Math.min(app.size[1], vh - 40);
     const offset = (n % 6) * 28;
@@ -131,7 +135,7 @@ export const useWindows = create<WindowStore>((set, get) => ({
 // Keep windows on screen when the player picks a smaller resolution.
 useStage.subscribe((st, prev) => {
   if (st.w === prev.w && st.h === prev.h) return;
-  const maxH = st.h - TASKBAR_H;
+  const maxH = st.h - taskbarReserve();
   useWindows.setState((s) => ({
     windows: s.windows.map((win) => {
       const w = Math.min(win.w, st.w);

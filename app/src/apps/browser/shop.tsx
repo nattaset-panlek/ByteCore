@@ -13,6 +13,8 @@ import { tm, useT } from "../../i18n";
 import { CATEGORIES, categoryLabel, marketName, NEW_TAB_URL, parseUrl, urls, type Route } from "./routes";
 import { useShop } from "./shopStore";
 import { Exchange } from "./exchange";
+import { SoftSite } from "./soft";
+import { SOFT_URL } from "../../game/appsdk/catalog";
 
 // The shop site. Its own light brand (Web/Market tokens); it does not use the Fluent controls (STYLE_NOTES).
 
@@ -22,6 +24,7 @@ export function WebPage({ url, navigate }: { url: string; navigate: Nav }) {
   const route = parseUrl(url);
   if (route.page === "newtab") return <NewTab navigate={navigate} />;
   if (route.page === "exchange") return <Exchange navigate={navigate} />;
+  if (route.page === "soft") return <SoftSite cat={route.cat} navigate={navigate} />;
   if (route.page === "notfound") return <NotFound url={route.url} navigate={navigate} />;
   return (
     <div className="web">
@@ -524,6 +527,10 @@ function NewTab({ navigate }: { navigate: Nav }) {
         <button type="button" onClick={() => navigate(urls.exchange())}>
           <span className="web-logo-mark">E</span>
           {t("exchange.name")}
+        </button>
+        <button type="button" onClick={() => navigate(SOFT_URL)}>
+          <span className="web-logo-mark">X</span>
+          {t("soft.name")}
         </button>
       </div>
     </div>

@@ -1,0 +1,132 @@
+// ==XeaApp==
+// @name        Snake
+// @id          snake
+// @version     1.0.3
+// @author      pix3l
+// @description The classic. Arrow keys or WASD to steer, Space to pause. Best score is saved.
+// @icon        🐍
+// @color       #f5c518
+// @width       460
+// @height      520
+// ==/XeaApp==
+
+const CELL = 20;
+const COLS = 22;
+const ROWS = 22;
+
+xea.style(`
+  #app { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; }
+  canvas { background: #141414; border: 1px solid var(--stroke); border-radius: 8px; }
+  .hud { display: flex; gap: 24px; font-variant-numeric: tabular-nums; }
+`);
+
+const canvas = xea.el("canvas", { width: COLS * CELL, height: ROWS * CELL });
+const ctx = canvas.getContext("2d");
+const scoreEl = xea.el("span");
+const bestEl = xea.el("span", { className: "xea-muted" });
+document.getElementById("app").append(xea.el("div", { className: "hud" }, scoreEl, bestEl), canvas);
+
+let best = await xea.storage.get("best", 0);
+let snake, dir, nextDir, food, score, alive, paused, timer;
+
+function reset() {
+  snake = [{ x: 8, y: 11 }, { x: 7, y: 11 }, { x: 6, y: 11 }];
+  dir = { x: 1, y: 0 };
+  nextDir = dir;
+  score = 0;
+  alive = true;
+  paused = true; // wait for Space so the player can click in first
+  placeFood();
+  hud();
+  clearInterval(timer);
+  timer = setInterval(step, 110);
+}
+
+function placeFood() {
+  do {
+    food = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+  } while (snake.some((s) => s.x === food.x && s.y === food.y));
+}
+
+function hud() {
+  scoreEl.textContent = `Score ${score}`;
+  bestEl.textContent = `Best ${best}`;
+}
+
+async function gameOver() {
+  alive = false;
+  clearInterval(timer);
+  if (score > best) {
+    best = score;
+    await xea.storage.set("best", best);
+    xea.notify("Snake", `New best score: ${best}!`);
+  }
+  hud();
+  draw();
+}
+
+function step() {
+  if (paused || !alive) return;
+  dir = nextDir;
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  const hitWall = head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS;
+  const hitSelf = snake.some((s) => s.x === head.x && s.y === head.y);
+  if (hitWall || hitSelf) return gameOver();
+  snake.unshift(head);
+  if (head.x === food.x && head.y === food.y) {
+    score += 10;
+    placeFood();
+    hud();
+  } else {
+    snake.pop();
+  }
+  draw();
+}
+
+function draw() {
+  ctx.fillStyle = "#141414";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ff99a4";
+  ctx.beginPath();
+  ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL / 2 - 3, 0, Math.PI * 2);
+  ctx.fill();
+  snake.forEach((s, i) => {
+    ctx.fillStyle = i === 0 ? "#6ccb5f" : "#3f9b45";
+    ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
+  });
+  if (!alive || paused) {
+    ctx.fillStyle = "#000000aa";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.font = "600 22px Segoe UI";
+    ctx.textAlign = "center";
+    const fresh = alive && score === 0 && snake.length === 3;
+    ctx.fillText(!alive ? "Game over" : fresh ? "Snake" : "Paused", canvas.width / 2, canvas.height / 2 - 8);
+    ctx.font = "14px Segoe UI";
+    ctx.fillText(!alive ? "Press Enter to play again" : fresh ? "Press Space to start" : "Space to resume", canvas.width / 2, canvas.height / 2 + 18);
+  }
+}
+
+const KEYS = {
+  ArrowUp: { x: 0, y: -1 }, KeyW: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 }, KeyS: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 }, KeyA: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 }, KeyD: { x: 1, y: 0 },
+};
+
+addEventListener("keydown", (e) => {
+  const d = KEYS[e.code];
+  if (d && (d.x !== -dir.x || d.y !== -dir.y)) nextDir = d;
+  if (e.code === "Space" && alive) {
+    paused = !paused;
+    draw();
+  }
+  if (e.code === "Enter" && !alive) {
+    reset();
+    paused = false;
+  }
+  if (d || e.code === "Space") e.preventDefault();
+});
+
+reset();
+draw();

@@ -38,9 +38,12 @@ const APP_MEM: Record<AppId, number> = {
   taskManager: 48,
   profile: 45,
   settings: 65,
-  scriptEditor: 95,
+  scriptEditor: 120,
+  textEditor: 30,
+  pdfReader: 58,
   contracts: 50,
   chimeraKit: 75,
+  installer: 24,
 };
 
 const SYSTEM = [
@@ -74,7 +77,7 @@ export function snapshot(now: number): Snapshot {
     icon: APPS[w.appId].icon,
     status: "",
     cpu: 0.1 + wobble(i * 3.1, now) * 0.9,
-    mem: APP_MEM[w.appId] * (0.95 + wobble(i * 1.7, now) * 0.1),
+    mem: (APP_MEM[w.appId] ?? 36) * (0.95 + wobble(i * 1.7, now) * 0.1),
     disk: 0,
     net: w.appId === "browser" ? 0.1 : 0,
     ref: w.id,

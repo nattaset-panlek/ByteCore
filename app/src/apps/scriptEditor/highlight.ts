@@ -18,8 +18,9 @@ const TOKEN = new RegExp(
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** Return HTML with <span class="tok-*"> around tokens; plain text is escaped. */
-export function highlight(code: string): string {
+/** Return HTML with <span class="tok-*"> around tokens; plain text is escaped. `plain` skips tokenizing (non-JS files). */
+export function highlight(code: string, plain = false): string {
+  if (plain) return esc(code) + "\n";
   let out = "";
   let last = 0;
   for (const m of code.matchAll(TOKEN)) {

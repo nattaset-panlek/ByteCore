@@ -1,0 +1,154 @@
+// ==XeaApp==
+// @name        Mines
+// @id          mines
+// @version     2.1.0
+// @author      sweeper_co
+// @description Clear the field without touching a mine. Left click opens, right click flags.
+// @icon        💣
+// @color       #f97316
+// @width       640
+// @height      560
+// ==/XeaApp==
+
+const LEVELS = {
+  Easy: { cols: 9, rows: 9, mines: 10 },
+  Medium: { cols: 16, rows: 16, mines: 40 },
+  Hard: { cols: 24, rows: 16, mines: 80 },
+};
+const COLORS = ["", "#60cdff", "#6ccb5f", "#ff99a4", "#d3a6ff", "#fce100", "#4fd1c5", "#fff", "#9d9d9d"];
+
+xea.style(`
+  #app { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; }
+  .top { display: flex; gap: 8px; align-items: center; }
+  .stat { min-width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+  .grid { display: grid; gap: 2px; padding: 8px; background: #1a1a1a; border-radius: 8px; }
+  .c { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 3px; background: #3a3a3a; font-weight: 700; font-size: 12px; }
+  .c:hover { background: #454545; }
+  .c.open { background: #262626; }
+  .c.boom { background: #c42b1c; }
+`);
+
+let best = await xea.storage.get("best", {});
+let level = "Easy";
+let cells, first, over, flags, started, tick;
+
+const top = xea.el("div", { className: "top" });
+const minesEl = xea.el("span", { className: "stat" });
+const timeEl = xea.el("span", { className: "stat" });
+const face = xea.el("button", { className: "xea-btn", onclick: () => newGame() }, "🙂");
+const grid = xea.el("div", { className: "grid" });
+const bestEl = xea.el("div", { className: "xea-muted" });
+
+function levelButtons() {
+  return Object.keys(LEVELS).map((name) =>
+    xea.el("button", { className: `xea-btn ${name === level ? "accent" : ""}`, onclick: () => { level = name; newGame(); } }, name),
+  );
+}
+
+function newGame() {
+  const L = LEVELS[level];
+  cells = Array.from({ length: L.rows * L.cols }, (_, i) => ({ i, mine: false, open: false, flag: false, n: 0 }));
+  first = true;
+  over = false;
+  flags = 0;
+  started = 0;
+  clearInterval(tick);
+  face.textContent = "🙂";
+  top.replaceChildren(...levelButtons(), minesEl, face, timeEl);
+  grid.style.gridTemplateColumns = `repeat(${L.cols}, 22px)`;
+  grid.replaceChildren(...cells.map((c) => {
+    c.el = xea.el("div", { className: "c" });
+    c.el.addEventListener("click", () => open(c));
+    c.el.addEventListener("contextmenu", (e) => { e.preventDefault(); flag(c); });
+    return c.el;
+  }));
+  bestEl.textContent = best[level] ? `Best ${level}: ${best[level]}s` : `No best time on ${level} yet`;
+  hud();
+  xea.window.setTitle(`Mines - ${level}`);
+}
+
+function neighbours(c) {
+  const { cols, rows } = LEVELS[level];
+  const x = c.i % cols, y = Math.floor(c.i / cols), out = [];
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if ((dx || dy) && nx >= 0 && ny >= 0 && nx < cols && ny < rows) out.push(cells[ny * cols + nx]);
+    }
+  }
+  return out;
+}
+
+function plant(safe) {
+  const avoid = new Set([safe, ...neighbours(safe)]);
+  let left = LEVELS[level].mines;
+  while (left > 0) {
+    const c = cells[Math.floor(Math.random() * cells.length)];
+    if (!c.mine && !avoid.has(c)) { c.mine = true; left--; }
+  }
+  cells.forEach((c) => (c.n = neighbours(c).filter((n) => n.mine).length));
+  started = Date.now();
+  tick = setInterval(hud, 500);
+}
+
+function open(c) {
+  if (over || c.open || c.flag) return;
+  if (first) { plant(c); first = false; }
+  if (c.mine) return lose(c);
+  const stack = [c];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (cur.open || cur.flag) continue;
+    cur.open = true;
+    paint(cur);
+    if (cur.n === 0) stack.push(...neighbours(cur).filter((n) => !n.open));
+  }
+  if (cells.every((x) => x.mine || x.open)) win();
+}
+
+function flag(c) {
+  if (over || c.open) return;
+  c.flag = !c.flag;
+  flags += c.flag ? 1 : -1;
+  paint(c);
+  hud();
+}
+
+function paint(c) {
+  c.el.className = `c ${c.open ? "open" : ""}`;
+  c.el.textContent = c.flag ? "🚩" : c.open && c.n ? c.n : "";
+  c.el.style.color = COLORS[c.n] || "";
+}
+
+function seconds() {
+  return started ? Math.floor((Date.now() - started) / 1000) : 0;
+}
+
+function hud() {
+  minesEl.textContent = `💣 ${LEVELS[level].mines - flags}`;
+  timeEl.textContent = `⏱ ${seconds()}`;
+}
+
+function lose(c) {
+  over = true;
+  clearInterval(tick);
+  face.textContent = "😵";
+  cells.filter((x) => x.mine).forEach((x) => { x.el.textContent = "💣"; x.el.className = "c open"; });
+  c.el.className = "c boom";
+}
+
+async function win() {
+  over = true;
+  clearInterval(tick);
+  face.textContent = "😎";
+  const time = seconds();
+  if (!best[level] || time < best[level]) {
+    best = { ...best, [level]: time };
+    await xea.storage.set("best", best);
+    xea.notify("Mines", `New best on ${level}: ${time}s`);
+  }
+  bestEl.textContent = `Cleared in ${time}s. Best ${level}: ${best[level]}s`;
+}
+
+document.getElementById("app").append(top, grid, bestEl);
+newGame();

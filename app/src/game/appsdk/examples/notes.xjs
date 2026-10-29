@@ -1,0 +1,111 @@
+// ==XeaApp==
+// @name        Sticky Notes
+// @id          notes
+// @version     1.2.0
+// @author      Xea Labs
+// @description Quick notes that save as you type. Export any note to a .txt file in the app folder.
+// @icon        📝
+// @color       #c58a00
+// @width       720
+// @height      480
+// ==/XeaApp==
+
+xea.style(`
+  #app { display: grid; grid-template-columns: 220px 1fr; height: 100vh; }
+  .side { border-right: 1px solid var(--stroke); display: flex; flex-direction: column; gap: 4px; padding: 12px; overflow: auto; }
+  .note { padding: 8px 10px; border-radius: 4px; cursor: default; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note:hover { background: #ffffff0f; }
+  .note.on { background: #ffffff15; }
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .bar { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--stroke); align-items: center; }
+  .bar .xea-input { flex: 1; }
+  textarea { flex: 1; resize: none; border: 0; outline: 0; padding: 16px; background: transparent; color: var(--text); font: 14px/22px "Cascadia Mono", Consolas, monospace; }
+  .status { padding: 4px 12px; color: var(--text-3); font-size: 12px; }
+`);
+
+let notes = await xea.storage.get("notes", [{ id: 1, title: "Welcome", body: "Type here. Notes save automatically." }]);
+let current = notes[0]?.id ?? null;
+let saveTimer = 0;
+
+const list = xea.el("div", { className: "side" });
+const title = xea.el("input", { className: "xea-input", placeholder: "Title" });
+const body = xea.el("textarea", { placeholder: "Write something..." });
+const status = xea.el("div", { className: "status" }, "Ready");
+
+function find() {
+  return notes.find((n) => n.id === current);
+}
+
+function renderList() {
+  list.replaceChildren(
+    xea.el("button", { className: "xea-btn accent", onclick: addNote }, "+ New note"),
+    ...notes.map((n) =>
+      xea.el("div", { className: `note ${n.id === current ? "on" : ""}`, onclick: () => select(n.id) }, n.title || "Untitled"),
+    ),
+  );
+}
+
+function select(id) {
+  current = id;
+  const n = find();
+  title.value = n ? n.title : "";
+  body.value = n ? n.body : "";
+  renderList();
+}
+
+function addNote() {
+  const id = Math.max(0, ...notes.map((n) => n.id)) + 1;
+  notes = [{ id, title: "New note", body: "" }, ...notes];
+  select(id);
+  save();
+}
+
+function save() {
+  clearTimeout(saveTimer);
+  status.textContent = "Saving...";
+  saveTimer = setTimeout(async () => {
+    await xea.storage.set("notes", notes);
+    status.textContent = `Saved ${new Date().toLocaleTimeString()}`;
+  }, 400);
+}
+
+function edit() {
+  const n = find();
+  if (!n) return;
+  n.title = title.value;
+  n.body = body.value;
+  renderList();
+  save();
+}
+
+async function exportNote() {
+  const n = find();
+  if (!n) return;
+  const file = `exports/${(n.title || "note").replace(/[^\w -]/g, "").trim() || "note"}.txt`;
+  await xea.fs.write(file, n.body);
+  xea.notify("Note exported", file);
+  status.textContent = `Exported to ${file}`;
+}
+
+function deleteNote() {
+  notes = notes.filter((n) => n.id !== current);
+  select(notes[0]?.id ?? null);
+  save();
+}
+
+title.addEventListener("input", edit);
+body.addEventListener("input", edit);
+
+document.getElementById("app").append(
+  list,
+  xea.el("div", { className: "main" },
+    xea.el("div", { className: "bar" },
+      title,
+      xea.el("button", { className: "xea-btn", onclick: exportNote }, "Export .txt"),
+      xea.el("button", { className: "xea-btn", onclick: deleteNote }, "Delete"),
+    ),
+    body,
+    status,
+  ),
+);
+select(current);

@@ -83,7 +83,10 @@ export const fmt = {
   signedCredits: (n: number) => `${n >= 0 ? "+" : "-"}₵ ${Math.abs(Math.round(n)).toLocaleString(intl())}`,
   date: (ts: number) => new Date(ts).toLocaleDateString(intl(), { day: "numeric", month: "short", year: "numeric" }),
   time: (ts: number) => new Date(ts).toLocaleTimeString(intl(), { hour: "2-digit", minute: "2-digit" }),
+  timeSeconds: (ts: number) => new Date(ts).toLocaleTimeString(intl(), { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
   dateTime: (ts: number) => `${fmt.date(ts)} ${fmt.time(ts)}`,
+  /** Lock screen: Tuesday, 27 October */
+  longDate: (ts: number) => new Date(ts).toLocaleDateString(intl(), { weekday: "long", day: "numeric", month: "long" }),
   /** Short numeric date for the taskbar: 27/10/2026 */
   shortDate: (ts: number) => new Date(ts).toLocaleDateString(intl(), { day: "2-digit", month: "2-digit", year: "numeric" }),
 };
