@@ -11,6 +11,7 @@ function createWindow() {
     backgroundColor: "#1a2340",
     autoHideMenuBar: true,
     title: "ByteCore",
+    icon: path.join(__dirname, "icon.ico"),
     webPreferences: { preload: path.join(__dirname, "preload.cjs") },
   });
   const devUrl = process.env.VITE_DEV_SERVER_URL;

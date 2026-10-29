@@ -51,6 +51,7 @@ export const PART_ICON: Record<PartKind, string> = {
   ram: "icon/table",
   net: "icon/globe",
   disk: "icon/database",
+  cool: "icon/power",
 };
 
 /** Page state with back history (for the back button in the TitleBar). */

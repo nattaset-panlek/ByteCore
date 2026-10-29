@@ -17,5 +17,6 @@ import tutorial from "./tutorial";
 import boot from "./boot";
 import ctx from "./ctx";
 import appsdk from "./appsdk";
+import gameplay from "./gameplay";
 
-export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...editors, ...profile, ...tutorial, ...boot, ...ctx, ...appsdk } as const;
+export default { ...game, ...shell, ...apps, ...terminal, ...chimera, ...exchange, ...contracts, ...taskmgr, ...modules, ...legal, ...scripteditor, ...editors, ...profile, ...tutorial, ...boot, ...ctx, ...appsdk, ...gameplay } as const;

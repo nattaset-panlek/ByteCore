@@ -15,6 +15,7 @@ const NAV: { id: Page; label: string; icon: string }[] = [
   { id: "ram", label: "stock.nav.ram", icon: PART_ICON.ram },
   { id: "net", label: "stock.nav.net", icon: PART_ICON.net },
   { id: "disk", label: "stock.nav.disk", icon: PART_ICON.disk },
+  { id: "cool", label: "rig.slot.cool", icon: PART_ICON.cool },
   { id: "sold", label: "stock.nav.sold", icon: "icon/wallet" },
 ];
 

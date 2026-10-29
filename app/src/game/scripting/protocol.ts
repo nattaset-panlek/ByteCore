@@ -1,7 +1,7 @@
 // Messages between the main thread and the script Web Worker (GDD 3.3).
 
 /** Main -> worker */
-export type ToWorker = { type: "run"; code: string } | { type: "reply"; id: number; ok: boolean; result?: unknown; error?: string };
+export type ToWorker = { type: "run"; code: string; sandbox?: boolean } | { type: "reply"; id: number; ok: boolean; result?: unknown; error?: string };
 
 /** Worker -> main */
 export type FromWorker =

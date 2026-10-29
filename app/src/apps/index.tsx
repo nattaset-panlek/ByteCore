@@ -16,6 +16,12 @@ import { RigStock } from "./RigStock";
 import { Wallet } from "./Wallet";
 import { Installer } from "./userApp/Installer";
 import { UserAppHost } from "./userApp/UserAppHost";
+import { LockgridApp } from "./gameplay/LockgridApp";
+import { OpHud, OpsBoard } from "./gameplay/OpsBoard";
+import { Relay } from "./gameplay/Relay";
+import { GhostBoard } from "./gameplay/GhostBoard";
+import { Trials } from "./gameplay/Trials";
+import "./gameplay/gameplay.css";
 import "./apps.css";
 import "./browser/browser.css";
 
@@ -36,6 +42,12 @@ export const APP_COMPONENTS: Record<AppId, ComponentType> = {
   contracts: Contracts,
   chimeraKit: ChimeraKit,
   installer: Installer,
+  lockgrid: LockgridApp,
+  opsBoard: OpsBoard,
+  opHud: OpHud,
+  relay: Relay,
+  ghostBoard: GhostBoard,
+  trials: Trials,
 };
 
 /** Window content for an app id; installed player apps (`user.<id>`) share the sandbox host. */

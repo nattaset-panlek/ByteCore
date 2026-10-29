@@ -1,6 +1,7 @@
 import type { Msg } from "../i18n";
 import type { Host, Job, Order } from "./types";
 import type { HostSummary } from "./network";
+import type { OpResult } from "./ops";
 
 // Game -> UI events. The game layer never imports the OS; the shell subscribes and shows toasts.
 // The Terminal and Chimera Kit subscribe for job results and session changes.
@@ -9,7 +10,7 @@ import type { HostSummary } from "./network";
 export type JobOutcome =
   | { kind: "scan"; found: HostSummary[] }
   | { kind: "probe"; host: Host }
-  | { kind: "crack"; ip: string; ok: boolean }
+  | { kind: "crack"; ip: string; ok: boolean; manual?: { clean: boolean; leftMs: number; moves: number; xp: number } }
   | { kind: "pull"; ip: string; remotePath: string; ok: boolean; dest?: string; size?: number; error?: Msg }
   | { kind: "download"; url: string; ok: boolean; dest?: string; size?: number; error?: Msg }
   | { kind: "compile"; src: string; ok: boolean; dest?: string; error?: string };
@@ -24,7 +25,21 @@ export type GameEvent =
   | { type: "traced"; ip: string }
   | { type: "traceWarning"; ip: string; secondsLeft: number }
   | { type: "sessionEnded"; ip: string; reason: "disconnect" | "traced" }
-  | { type: "contractComplete"; contractId: string };
+  | { type: "contractComplete"; contractId: string }
+  | { type: "skillPoint"; points: number }
+  | { type: "skillUsed"; skill: string }
+  | { type: "thermalThrottle"; temp: number }
+  | { type: "thermalShutdown"; temp: number; cancelled: number }
+  | { type: "opStage"; name: string; stage: number; banked: number; trace: number }
+  | { type: "opWarn"; name: string }
+  | { type: "opEnded"; result: OpResult; xp: number }
+  | { type: "relayMessage"; faction: string; key: string }
+  | { type: "glitch" }
+  | { type: "raceStarted"; rival: string; ip: string; bounty: number }
+  | { type: "raceEnded"; won: boolean; rival: string; bounty: number }
+  | { type: "contractSniped"; rival: string; tier: number }
+  | { type: "weekEnded"; rank: number; reward: number; league: number; promoted: boolean; demoted: boolean }
+  | { type: "trialUnlock"; key: string };
 
 type Listener = (e: GameEvent) => void;
 const listeners = new Set<Listener>();

@@ -1,5 +1,6 @@
 import { SAVE_VERSION, TICK_MS } from "./balance";
 import { newGame, type GameState } from "./state";
+import { newSkills } from "./skills";
 import { useGame } from "./store";
 import { withGuide, withSkeleton } from "./vfs";
 
@@ -58,7 +59,17 @@ function migrate(g: GameState): GameState {
     ...g,
     wallet: { ...base.wallet, ...g.wallet },
     // older saves have no player.stats; keep the rest of the player and fill in defaults
-    player: { ...base.player, ...g.player, stats: { ...base.player.stats, ...g.player?.stats } },
+    player: {
+      ...base.player,
+      ...g.player,
+      stats: { ...base.player.stats, ...g.player?.stats },
+      // saves from before the Skill Tree get the points their level has earned
+      skills: g.player?.skills ?? newSkills(g.player?.level ?? 1),
+    },
+    // the Cooling slot came with Overclock
+    rig: { ...g.rig, cool: g.rig?.cool ?? base.rig.cool },
+    factions: g.factions ? { ...base.factions, ...g.factions } : base.factions,
+    rivals: g.rivals ? { ...base.rivals, ...g.rivals } : base.rivals,
     version: SAVE_VERSION,
   };
 }

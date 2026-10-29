@@ -6,7 +6,9 @@ import { useT } from "../../i18n";
 import { openContextMenu, separator } from "../../os/contextMenu";
 import { TabRow, useWindow } from "../../os/Window";
 import { TabViewItem } from "../../ui";
+import { TermSession, TermStatus, TransferRow } from "./TermPanels";
 import { formatOutcome, LOCAL_HOME, promptFor, runCommand, type OutLine, type Scope } from "./commands";
+import { onTerminalLines } from "../gameplay/terminalBus";
 import "./terminal.css";
 
 interface Shell {
@@ -69,6 +71,18 @@ export function Terminal() {
     prevConnected.current = connected;
   }, [connected]);
 
+  // Lines from other windows (Lockgrid) go to the first local shell.
+  useEffect(
+    () =>
+      onTerminalLines((lines) =>
+        setShells((all) => {
+          const id = all.find((s) => s.scope === "local")?.id;
+          return all.map((s) => (s.id === id ? { ...s, lines: keep([...s.lines, ...lines]) } : s));
+        })
+      ),
+    []
+  );
+
   // Job results and trace drops append to the right tab.
   useEffect(
     () =>
@@ -118,7 +132,7 @@ export function Terminal() {
       history.current = [...history.current, cmd];
       histPos.current = history.current.length;
     }
-    const echo: OutLine = { text: `${promptFor(shell.scope, shell.cwd)} ${cmd}`, tone: "muted" };
+    const echo: OutLine = { text: cmd, prompt: promptFor(shell.scope, shell.cwd) };
     const jobBefore = useGame.getState().game.nextJob;
     const out = runCommand(cmd, shell.scope, shell.cwd);
     const jobAfter = useGame.getState().game.nextJob;
@@ -175,7 +189,7 @@ export function Terminal() {
         {shells.map((s) => (
           <TabViewItem
             key={s.id}
-            icon={s.scope === "remote" ? "icon/globe" : "app/Terminal"}
+            icon="app/Terminal"
             label={tabLabel(s)}
             selected={s.id === shell.id}
             onClick={() => setActiveId(s.id)}
@@ -183,6 +197,7 @@ export function Terminal() {
           />
         ))}
       </TabRow>
+      <div className="term-body">
       <div
         className="term"
         onPointerDown={() => inputRef.current?.focus()}
@@ -198,16 +213,7 @@ export function Terminal() {
       >
         <div className="term-view" ref={viewRef}>
           <TermLines lines={shell.lines} />
-          {busy &&
-            running.map((j) => {
-              const pct = Math.max(0, Math.min(1, jobProgress(j, Date.now())));
-              const filled = Math.round(pct * 24);
-              return (
-                <div key={j.id} className="term-line tone-muted">
-                  {`${j.kind}${j.target ? ` ${j.target}` : ""} [${"#".repeat(filled)}${"-".repeat(24 - filled)}] ${Math.round(pct * 100)}%`}
-                </div>
-              );
-            })}
+          {busy && running.map((j) => <TransferRow key={j.id} job={j} pct={Math.max(0, Math.min(1, jobProgress(j, Date.now())))} />)}
           {busy && <div className="term-line tone-muted">{t("terminal.busyHint")}</div>}
           <div className={`term-input-row ${busy ? "busy" : ""}`}>
             <span className="term-prompt">{promptFor(shell.scope, shell.cwd)}</span>
@@ -225,6 +231,9 @@ export function Terminal() {
           </div>
         </div>
       </div>
+      {shell.scope === "remote" && connected && <TermSession />}
+      </div>
+      <TermStatus scope={shell.scope} cwd={shell.cwd} />
     </>
   );
 }
@@ -234,14 +243,23 @@ const MAX_LINES = 1000;
 const keep = <T,>(lines: T[]) => (lines.length > MAX_LINES ? lines.slice(-MAX_LINES) : lines);
 
 /** The output history. Memoized so the job progress pulse (5x a second) only redraws the progress line. */
-const TermLines = memo(function TermLines({ lines }: { lines: { text: string; tone?: string }[] }) {
+const TermLines = memo(function TermLines({ lines }: { lines: OutLine[] }) {
+  // Errors and warnings get the [x] / [!] marker from the Figma console style.
+  const mark = (l: OutLine) => (l.tone === "err" && !l.text.startsWith("[") ? "[x] " : l.tone === "warn" && !l.text.startsWith("[") ? "[!] " : "");
   return (
     <>
-      {lines.map((l, i) => (
-        <div key={i} className={`term-line ${l.tone ? `tone-${l.tone}` : ""}`}>
-          {l.text || " "}
-        </div>
-      ))}
+      {lines.map((l, i) =>
+        l.prompt !== undefined ? (
+          <div key={i} className="term-line term-echo">
+            <span className="term-prompt">{l.prompt}</span> {l.text}
+          </div>
+        ) : (
+          <div key={i} className={`term-line ${l.tone ? `tone-${l.tone}` : ""}`}>
+            {mark(l)}
+            {l.text || " "}
+          </div>
+        )
+      )}
     </>
   );
 });

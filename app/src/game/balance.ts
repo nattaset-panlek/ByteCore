@@ -1,6 +1,6 @@
 // Tuning constants. Phase 7 balances these; keep every number the economy uses here.
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export const TICK_MS = 1000;
 /** Offline progress is capped so a long absence cannot flood the wallet or clear all Heat. */

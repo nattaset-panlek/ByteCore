@@ -13,11 +13,14 @@ import { urls } from "./browser/routes";
 import { credits, duration, EmptyState, fileSize, LinkButton, NavApp, NavHeader, PART_ICON, Section, slotLabel, stageLabel, useNow, usePages } from "./common";
 import { appName } from "../os/apps";
 import { fmt, t, tm, useT } from "../i18n";
+import { TuningPage } from "./gameplay/TuningPage";
+import { skillEffects } from "../game/skills";
 
-type Page = "overview" | "hardware" | "modules" | "deliveries" | "storage";
+type Page = "overview" | "hardware" | "tuning" | "modules" | "deliveries" | "storage";
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: "overview", label: "rig.nav.overview", icon: "icon/home" },
   { id: "hardware", label: "rig.nav.hardware", icon: "icon/developer_board" },
+  { id: "tuning", label: "rig.nav.tuning", icon: "icon/power" },
   { id: "modules", label: "rig.modules", icon: "icon/save" },
   { id: "deliveries", label: "rig.nav.deliveries", icon: "icon/arrow_download" },
   { id: "storage", label: "rig.nav.storage", icon: "icon/database" },
@@ -70,6 +73,7 @@ export function RigManager() {
       )}
       {pages.page === "overview" && <Overview go={pages.go} report={report} />}
       {pages.page === "hardware" && <SlotGrid report={report} />}
+      {pages.page === "tuning" && <TuningPage />}
       {pages.page === "modules" && <Modules report={report} />}
       {pages.page === "deliveries" && <Deliveries report={report} />}
       {pages.page === "storage" && <StorageCard detailed />}
@@ -274,7 +278,7 @@ function Modules({ report }: { report: Report }) {
 
   return (
     <>
-      <Section title={t("rig.modules.installed")} action={<span className="t-caption c-secondary">{t("rig.modules.slots", { used: installed.length, max: MODULE_SLOTS })}</span>}>
+      <Section title={t("rig.modules.installed")} action={<span className="t-caption c-secondary">{t("rig.modules.slots", { used: installed.length, max: MODULE_SLOTS + skillEffects(useGame.getState().game.player.skills).moduleSlots })}</span>}>
         {installed.length === 0 ? (
           <Card>
             <EmptyState icon="icon/save" title={t("rig.modules.empty")} />

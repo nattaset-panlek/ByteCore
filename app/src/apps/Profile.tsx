@@ -6,14 +6,43 @@ import { useWindows } from "../os/windowStore";
 import { Button, Icon, Meter, StatCard } from "../ui";
 import { credits, date, fileSize, Section } from "./common";
 import { netSpeed } from "./RigManager";
+import { useEffect, useRef, useState } from "react";
+import { useWindow } from "../os/Window";
+import { SkillsPage } from "./gameplay/SkillsPage";
 
 /** Tier title from player level, matching the unlock gates (GDD 4). */
 export function titleKey(level: number): string {
   return level >= 10 ? "profile.title.sovereign" : level >= 6 ? "profile.title.ghost" : level >= 3 ? "profile.title.intruder" : "profile.title.kiddie";
 }
 
-/** Profile: level, XP, lifetime stats, rig summary, account (GDD 4). */
+/** Profile: Overview (level, XP, stats, rig, account) and Skills. Launch arg `page: "skills"`. */
 export function Profile() {
+  const t = useT();
+  const { win } = useWindow();
+  const [tab, setTab] = useState<"overview" | "skills">(win.args?.page === "skills" ? "skills" : "overview");
+  const points = useGame((s) => s.game.player.skills.points);
+  const seen = useRef(win.args?.nonce);
+  useEffect(() => {
+    if (win.args?.nonce === seen.current) return;
+    seen.current = win.args?.nonce;
+    if (win.args?.page === "skills") setTab("skills");
+  });
+  return (
+    <div className="profile-shell">
+      <div className="pivot">
+        {(["overview", "skills"] as const).map((id) => (
+          <button type="button" key={id} className={`pivot-item ${tab === id ? "on" : ""}`} onClick={() => setTab(id)}>
+            {t(`skills.tab.${id}`)}
+            {id === "skills" && points > 0 && <span className="info-badge">{points}</span>}
+          </button>
+        ))}
+      </div>
+      {tab === "overview" ? <Overview /> : <SkillsPage />}
+    </div>
+  );
+}
+
+function Overview() {
   const t = useT();
   const g = useGame((s) => s.game);
   const open = useWindows((s) => s.open);

@@ -117,3 +117,14 @@
 .editor-drop.over { border-color: var(--accent); background: #60cdff14; }
 .editor-import-text { height: 160px; padding: 10px 12px; background: var(--term-bg); border: 1px solid var(--stroke-control); border-radius: var(--r-control); color: var(--term-text); font: 400 12px/18px var(--mono); outline: 0; resize: vertical; }
 .editor-import-text:focus { border-color: var(--accent); }
+
+/* Code-branch skills (Autocomplete, Snippets, Error lens) */
+.ide-ac { position: absolute; z-index: 5; width: 420px; padding: 4px; display: flex; flex-direction: column; gap: 2px; background: var(--bg-flyout); border: 1px solid var(--stroke-surface); border-radius: 8px; font: 400 13px/20px var(--font); }
+.ide-ac-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; color: var(--text-primary); text-align: left; cursor: default; }
+.ide-ac-item:hover, .ide-ac-item.on { background: var(--subtle-selected); }
+.ide-ac-item.on .t-mono { color: var(--accent-text); }
+.ide-ac-doc { padding: 6px 10px 4px; border-top: 1px solid var(--stroke-divider); }
+.ide-lens-line { position: absolute; left: 0; right: 0; height: 20px; background: #e7485622; border-left: 2px solid var(--term-red); pointer-events: none; }
+.ide-gutter .lens { color: var(--term-red); }
+.ide-snippet { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 4px; background: var(--bg-card); }
+.ide-snippet pre { margin: 0; white-space: pre-wrap; font-family: var(--mono); }

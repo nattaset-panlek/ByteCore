@@ -12,7 +12,7 @@ export const marketName = () => t("shop.marketName");
 export const exchangeName = () => t("exchange.name");
 
 /** Shop categories. Display names: categoryLabel(id) (plural, "Processors") and slotLabel(id) from ../common (singular). */
-export const CATEGORIES: { id: PartKind }[] = [{ id: "cpu" }, { id: "ram" }, { id: "net" }, { id: "disk" }];
+export const CATEGORIES: { id: PartKind }[] = [{ id: "cpu" }, { id: "ram" }, { id: "net" }, { id: "disk" }, { id: "cool" }];
 
 export const categoryLabel = (kind: PartKind | "all") => t(`shop.cat.${kind}`);
 
@@ -25,7 +25,7 @@ export type Route =
   | { page: "soft"; cat: SoftCategory | "all" }
   | { page: "notfound"; url: string };
 
-const KINDS = ["cpu", "ram", "net", "disk"];
+const KINDS = ["cpu", "ram", "net", "disk", "cool"];
 
 export function parseUrl(raw: string): Route {
   const url = raw.trim();

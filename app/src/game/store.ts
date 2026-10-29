@@ -28,6 +28,14 @@ import { bailAmount, newGame, uid, type GameState } from "./state";
 import { msg, type Msg, type TKey, type Vars } from "../i18n";
 import type { DirNode, FileNode, Host, Job, JobKind, Part, Txn } from "./types";
 import * as vfs from "./vfs";
+import { activeSkill, canLearn, GHOST_VEIL_MS, respecCost, SKILL, skillEffects, GAME_WEEK_MS, type SkillId } from "./skills";
+import { cpuBoost, netBoost, PROFILES, THROTTLE, type OcStep, type TuneProfile } from "./thermal";
+import { FAST_HANDS, LOADOUT_SLOTS, loadoutCost, opHosts, PROXY_MS, refillBoard, type LoadoutId, type OpRun } from "./ops";
+import { CHAPTER_POINT, clampRep, factionPerks, RIVAL_OF, repTier, STORY_REP, type ChoiceId, type FactionId } from "./factions";
+import { endOp, send } from "./gameplayTick";
+import { SCORE } from "./rivals";
+import { TRIAL, TRIALS, MEDAL_RANK, trialXp, type TrialId, type TrialRecord } from "./trials";
+import { CLEAN_SHARE, TIMEOUT_PENALTY } from "./lockgrid";
 
 /** Failed actions carry a translatable message (show it with tm(r.error)). */
 export type Result = { ok: true } | { ok: false; error: Msg };
@@ -106,6 +114,32 @@ interface GameStore {
   /** Prison: wipe the record and start over. */
   newIdentity: () => void;
 
+  // Skill Tree (docs/gameplay-ideas.md §7)
+  learnSkill: (id: SkillId) => Result;
+  respecSkills: () => Result;
+  /** Active skills: `skill use ghost` / `skill use overdrive` */
+  useSkill: (name: string) => Result;
+
+  // Lockgrid: the hands-on crack. checkCrack validates before the grid opens; finishManualCrack applies it.
+  checkCrack: (ip: string) => Result;
+  finishManualCrack: (ip: string, r: { solved: boolean; leftMs: number; limitMs: number; moves: number }) => Result;
+
+  // Overclock
+  setClock: (part: "cpu" | "net", step: OcStep) => void;
+  setProfile: (p: TuneProfile) => void;
+
+  // Operations
+  launchOp: (opId: string, loadout: LoadoutId[]) => Result;
+  useProxy: () => Result;
+  exfil: () => Result;
+
+  // Relay
+  replyRelay: (faction: FactionId, msgId: string, choice: ChoiceId) => Result;
+  readRelay: (faction: FactionId) => void;
+
+  // Script Trials: store a finished trial; returns what it unlocked
+  recordTrial: (id: TrialId, rec: TrialRecord) => { xp: number; point: boolean; best: boolean };
+
   // Files (capacity checked against the installed storage)
   writeFile: (path: string, f: Omit<FileNode, "type" | "name" | "modified">) => Result;
   mkdir: (path: string) => Result;
@@ -167,23 +201,93 @@ export const useGame = create<GameStore>((set, get) => {
     const g = get().game;
     const b = moduleBonus(g.modules);
     const s = rigStats(g.rig);
-    return { ...s, netMbps: s.netMbps * (1 + b.net), cpu: s.cpu * (1 + b.crack) };
+    // Overclock speeds jobs up; a Hot rig is throttled.
+    const heat = g.tuning.throttled ? 1 - THROTTLE : 1;
+    return { ...s, netMbps: s.netMbps * (1 + b.net) * netBoost(g.tuning) * heat, cpu: s.cpu * (1 + b.crack) * cpuBoost(g.tuning) * heat };
+  };
+  const fx = () => skillEffects(get().game.player.skills);
+  const shutDown = () => {
+    const u = get().game.tuning.shutdownUntil;
+    return !!u && now() < u;
+  };
+  const setSkills = (sk: Partial<GameState["player"]["skills"]>) => {
+    const p = get().game.player;
+    patch({ player: { ...p, skills: { ...p.skills, ...sk } } });
+  };
+  const grantPoints = (n: number) => {
+    setSkills({ points: get().game.player.skills.points + n });
+    emit({ type: "skillPoint", points: get().game.player.skills.points });
+  };
+
+  /** Crack chance with Lucky roll and a Lockgrid timeout penalty. */
+  const chanceFor = (host: Host, penalty = 0) => Math.min(0.99, crackChance(boostedStats().cpu, host.security, host.tier) + fx().luck - penalty);
+
+  /** A host fell: XP, stats, contracts, module drop, op stage, weekly score. Returns the XP given. */
+  const crackSucceeded = (host: Host, clean: boolean) => {
+    const g = get().game;
+    patch({ net: { ...g.net, hosts: g.net.hosts.map((h) => (h.ip === host.ip ? { ...h, cracked: true } : h)) } });
+    const xp = Math.round(CRACK_XP * host.tier * (clean ? 1.25 : 1));
+    get().addXp(xp);
+    bumpStat("cracks");
+    if (clean) {
+      const p = get().game.player;
+      patch({ player: { ...p, stats: { ...p.stats, cleanCracks: (p.stats.cleanCracks ?? 0) + 1 } }, rivals: { ...get().game.rivals, score: get().game.rivals.score + SCORE.cleanCrack } });
+    }
+    bumpContracts("crack", host.tier);
+    // A recovered module may drop from Tier 2+ targets (more often when The Static trusts you).
+    if (host.tier >= 2 && Math.random() < factionPerks(g.factions.rep).moduleDrop) {
+      const def = moduleForTier(host.tier, Math.random());
+      if (def) get().writeFile(`C:/tools/${def.file}`, moduleFile(def));
+    }
+    advanceOp("crack", host.ip);
+    return xp;
+  };
+
+  /** Move the active op on when a stage's action happens on its host. */
+  const advanceOp = (action: "crack" | "pull", ip: string) => {
+    const run = get().game.ops.active;
+    if (!run) return;
+    const stage = run.op.stages[run.stage];
+    if (!stage || stage.ip !== ip) return;
+    if ((action === "pull") !== (stage.kind === "pull")) return;
+    let next: OpRun = run;
+    if (stage.kind === "pull") {
+      next = { ...run, pulled: run.pulled + 1 };
+      if (next.pulled < (stage.need ?? 1)) {
+        patch({ ops: { ...get().game.ops, active: next } });
+        return;
+      }
+    }
+    next = { ...next, stage: run.stage + 1, banked: run.banked + stage.payout, pulled: 0 };
+    patch({ ops: { ...get().game.ops, active: next } });
+    emit({ type: "opStage", name: run.op.name, stage: next.stage, banked: next.banked, trace: Math.round(run.trace) });
+    if (next.stage >= run.op.stages.length) get().exfil();
   };
 
   /** Create a job and expected finish time from the current rig. */
   const startJob = (kind: JobKind, extra: Partial<Job>, req: JobRequest): Job => {
     const g = get().game;
     const t = now();
+    let ms = jobDuration(req, boostedStats());
+    if (kind === "crack") {
+      ms *= fx().crackTime;
+      if (req.host?.op && g.ops.active?.loadout.includes("fast_hands")) ms *= 1 - FAST_HANDS;
+      // Overdrive: the next crack finishes at once.
+      if (g.player.skills.overdrive) {
+        ms = 400;
+        setSkills({ overdrive: false });
+      }
+    }
     const job: Job = {
       id: g.nextJob,
       kind,
       label: kind,
       startedAt: t,
-      endsAt: t + jobDuration(req, boostedStats()),
+      endsAt: t + Math.round(ms),
       load: jobLoad(kind),
       ...extra,
     };
-    patch({ jobs: [...g.jobs, job], nextJob: g.nextJob + 1 });
+    patch({ jobs: [...get().game.jobs, job], nextJob: g.nextJob + 1 });
     return job;
   };
 
@@ -225,18 +329,9 @@ export const useGame = create<GameStore>((set, get) => {
       const g = get().game;
       const host = g.net.hosts.find((h) => h.ip === job.target);
       if (!host) return;
-      const ok = Math.random() < crackChance(boostedStats().cpu, host.security, host.tier);
-      if (ok) {
-        patch({ net: { ...g.net, hosts: g.net.hosts.map((h) => (h.ip === job.target ? { ...h, cracked: true } : h)) } });
-        get().addXp(CRACK_XP * host.tier);
-        bumpStat("cracks");
-        bumpContracts("crack", host.tier);
-        // A recovered module may drop from Tier 2+ targets.
-        if (host.tier >= 2 && Math.random() < 0.3) {
-          const def = moduleForTier(host.tier, Math.random());
-          if (def) get().writeFile(`C:/tools/${def.file}`, moduleFile(def));
-        }
-      } else get().addHeat(HEAT.crackFail);
+      const ok = Math.random() < chanceFor(host, job.penalty);
+      if (ok) crackSucceeded(host, false);
+      else get().addHeat(HEAT.crackFail);
       emit({ type: "jobComplete", job, outcome: { kind: "crack", ip: job.target!, ok } });
       return;
     }
@@ -266,6 +361,20 @@ export const useGame = create<GameStore>((set, get) => {
       get().addHeat(HEAT.perPull);
       bumpStat("pulls");
       bumpContracts("pull", host.tier);
+      advanceOp("pull", host.ip);
+      // Ghost Board race: taking the marked file first wins the bounty.
+      const race = get().game.rivals.race;
+      if (race && race.ip === host.ip && race.path === job.remotePath) {
+        const rv = get().game.rivals;
+        const rec = rv.h2h[race.rival] ?? [0, 0];
+        patch({
+          rivals: { ...rv, race: null, score: rv.score + SCORE.race, h2h: { ...rv.h2h, [race.rival]: [rec[0] + 1, rec[1]] }, feed: [{ at: now(), key: "ghost.feed.raceWon", vars: { ip: race.ip }, rival: race.rival }, ...rv.feed].slice(0, 30) },
+        });
+        get().earn(race.bounty, "txn.bounty", "sale", { ip: race.ip });
+        const p = get().game.player;
+        patch({ player: { ...p, stats: { ...p.stats, races: (p.stats.races ?? 0) + 1 } } });
+        emit({ type: "raceEnded", won: true, rival: race.rival, bounty: race.bounty });
+      }
       emit({ type: "jobComplete", job, outcome: { ...outcomeBase, ok: true, dest: `${destDir}/${name}`, size: node.size } });
     }
   };
@@ -300,12 +409,15 @@ export const useGame = create<GameStore>((set, get) => {
       const r = tick(get().game, t);
       if (r.game !== get().game) set({ game: r.game });
       emitAll(r.events);
+      for (const e of r.events) if (e.type === "opEnded" && e.xp > 0) get().addXp(e.xp);
       if (get().game.legal.state === "free") processJobs(t);
     },
 
     earn: (amount, label, kind, vars) => {
       const g = get().game;
-      patch({ wallet: { ...g.wallet, balance: g.wallet.balance + amount }, txns: addTxn(g.txns, label, amount, kind, now(), vars) });
+      // Credits earned count toward the Ghost Board week.
+      const rivals = kind === "sale" ? { ...g.rivals, score: g.rivals.score + amount } : g.rivals;
+      patch({ wallet: { ...g.wallet, balance: g.wallet.balance + amount }, txns: addTxn(g.txns, label, amount, kind, now(), vars), rivals });
     },
 
     spend: (amount, label, kind, vars) => {
@@ -324,8 +436,13 @@ export const useGame = create<GameStore>((set, get) => {
         level++;
         ups.push(level);
       }
-      patch({ player: { ...get().game.player, level, xp: cur } });
+      const p = get().game.player;
+      patch({ player: { ...p, level, xp: cur, skills: { ...p.skills, points: p.skills.points + ups.length } } });
       emitAll(ups.map((l) => ({ type: "levelUp", level: l })));
+      if (ups.length) emit({ type: "skillPoint", points: get().game.player.skills.points });
+      // A new tier opened: post a fresh Ops Board for it.
+      const ops = get().game.ops;
+      if (!ops.active && ups.some((l) => Object.values(TIER_UNLOCK_LEVEL).includes(l))) patch({ ops: { ...ops, ...refillBoard(level, now(), (now() & 0xffff) ^ level) } });
     },
 
     addHeat: (amount) => {
@@ -340,7 +457,8 @@ export const useGame = create<GameStore>((set, get) => {
     placeOrder: (modelIds) => {
       if (modelIds.length === 0) return fail("err.nothingToOrder");
       const models = modelIds.map(getModel);
-      const total = models.reduce((s, m) => s + m.price, 0);
+      const market = factionPerks(get().game.factions.rep).market;
+      const total = Math.round(models.reduce((s, m) => s + m.price, 0) * market);
       const paid =
         models.length === 1
           ? get().spend(total, "txn.order", "purchase", { name: models[0].name })
@@ -350,9 +468,9 @@ export const useGame = create<GameStore>((set, get) => {
       const orders = models.map((m) => ({
         id: uid("order"),
         modelId: m.id,
-        price: m.price,
+        price: Math.round(m.price * market),
         placedAt: t,
-        arrivesAt: t + m.eta * 1000,
+        arrivesAt: t + Math.round(m.eta * 1000 * fx().delivery),
         notified: false,
         claimed: false,
       }));
@@ -421,7 +539,8 @@ export const useGame = create<GameStore>((set, get) => {
       if (!host) return fail("err.hostUnknown", { name: ip });
       if (!host.portsKnown) return fail("err.probeFirst");
       if (host.cracked) return fail("err.alreadyCracked");
-      if (get().game.jobs.some((j) => j.kind === "crack" && j.target === ip)) return fail("err.jobRunning");
+      const c = get().checkCrack(ip);
+      if (!c.ok) return c;
       startJob("crack", { target: ip }, { kind: "crack", host });
       return OK;
     },
@@ -482,7 +601,7 @@ export const useGame = create<GameStore>((set, get) => {
         const { hash, value, tier } = node.loot;
         if (sold.has(hash) || g.player.level < (TIER_UNLOCK_LEVEL[tier] ?? 1)) continue;
         sold.add(hash);
-        earned += value;
+        earned += Math.round(value * fx().sale);
         xp += Math.floor(value / DATA_XP_DIVISOR);
         soldTiers.push(tier);
       }
@@ -512,6 +631,13 @@ export const useGame = create<GameStore>((set, get) => {
       get().earn(c.reward.credits, "txn.contract", "sale", { tier: c.tier });
       get().addXp(c.reward.xp);
       bumpStat("contracts");
+      const rv = get().game.rivals;
+      patch({ rivals: { ...rv, score: rv.score + SCORE.contract } });
+      const f = get().game.factions;
+      if (c.faction && c.faction in f.rep) {
+        const id = c.faction as FactionId;
+        patch({ factions: send({ ...f, rep: { ...f.rep, [id]: clampRep(f.rep[id] + (c.rep ?? 5)) } }, id, { from: "them", key: `relay.thanks.${id}`, vars: { rep: c.rep ?? 5 } }, now(), []) });
+      }
       return OK;
     },
 
@@ -520,7 +646,7 @@ export const useGame = create<GameStore>((set, get) => {
       const node = vfs.getNode(g.fs, path);
       if (!node || node.type !== "file" || !node.module || !MODULES[node.module]) return fail("err.notAModule");
       if (g.modules.includes(node.module)) return fail("err.moduleLoaded");
-      if (g.modules.length >= MODULE_SLOTS) return fail("err.moduleSlotsFull");
+      if (g.modules.length >= MODULE_SLOTS + fx().moduleSlots) return fail("err.moduleSlotsFull");
       patch({ modules: [...g.modules, node.module] });
       return OK;
     },
@@ -531,7 +657,7 @@ export const useGame = create<GameStore>((set, get) => {
       const g = get().game;
       if (g.heat <= 0) return fail("err.noHeat");
       const amount = Math.min(SCRUB_CHUNK, Math.ceil(g.heat));
-      const paid = get().spend(amount * SCRUB_COST_PER_POINT, "txn.scrub", "proxy");
+      const paid = get().spend(Math.round(amount * SCRUB_COST_PER_POINT * factionPerks(g.factions.rep).scrub), "txn.scrub", "proxy");
       if (!paid.ok) return paid;
       patch({ heat: Math.max(0, get().game.heat - amount) });
       return OK;
@@ -588,6 +714,222 @@ export const useGame = create<GameStore>((set, get) => {
         if (r.ok) fs = r.root;
       }
       patch({ player: { ...g.player, name }, setupDone: true, fs });
+    },
+
+    learnSkill: (id) => {
+      const p = get().game.player;
+      if (!SKILL[id]) return fail("err.skillUnknown", { name: id });
+      if (!canLearn(p.skills, p.level, id)) return fail(p.skills.points <= 0 ? "err.noSkillPoints" : "err.skillLocked");
+      setSkills({ ranks: { ...p.skills.ranks, [id]: (p.skills.ranks[id] ?? 0) + 1 }, points: p.skills.points - 1 });
+      return OK;
+    },
+
+    respecSkills: () => {
+      const s = get().game.player.skills;
+      const spent = Object.values(s.ranks).reduce((n, r) => n + (r ?? 0), 0);
+      if (!spent) return fail("err.nothingToRespec");
+      const t = now();
+      const cost = respecCost(s, t);
+      const paid = get().spend(cost, "txn.respec", "purchase");
+      if (!paid.ok) return paid;
+      const week = Math.floor(t / GAME_WEEK_MS);
+      setSkills({ ranks: {}, points: s.points + spent, respecs: (week === s.respecWeek ? s.respecs : 0) + 1, respecWeek: week, overdrive: false });
+      return OK;
+    },
+
+    useSkill: (name) => {
+      const def = activeSkill(name);
+      if (!def) return fail("err.skillUnknown", { name });
+      const s = get().game.player.skills;
+      if (!(s.ranks[def.id] ?? 0)) return fail("err.skillNotLearned");
+      const t = now();
+      const ready = s.cooldowns[def.id] ?? 0;
+      if (t < ready) return fail("err.skillCooldown", { seconds: Math.ceil((ready - t) / 1000) });
+      if (def.id === "ghost_veil") {
+        const g = get().game;
+        if (!g.net.session && !g.ops.active) return fail("err.notConnected");
+        const until = t + GHOST_VEIL_MS;
+        patch({
+          net: g.net.session ? { ...g.net, session: { ...g.net.session, pausedUntil: until } } : g.net,
+          ops: g.ops.active ? { ...g.ops, active: { ...g.ops.active, pausedUntil: until } } : g.ops,
+        });
+      } else if (def.id === "overdrive") setSkills({ overdrive: true });
+      setSkills({ cooldowns: { ...get().game.player.skills.cooldowns, [def.id]: t + def.active!.cooldownMs } });
+      emit({ type: "skillUsed", skill: def.id });
+      return OK;
+    },
+
+    checkCrack: (ip) => {
+      const host = hostAt(ip);
+      if (!host) return fail("err.hostUnknown", { name: ip });
+      if (!host.portsKnown) return fail("err.probeFirst");
+      if (host.cracked) return fail("err.alreadyCracked");
+      if (get().game.jobs.some((j) => j.kind === "crack" && j.target === ip)) return fail("err.jobRunning");
+      if (shutDown()) return fail("err.rigShutdown");
+      return OK;
+    },
+
+    finishManualCrack: (ip, r) => {
+      const c = get().checkCrack(ip);
+      if (!c.ok) return c;
+      const host = hostAt(ip)!;
+      const job: Job = { id: get().game.nextJob, kind: "crack", label: "crack", target: ip, startedAt: now(), endsAt: now(), load: jobLoad("crack") };
+      if (r.solved) {
+        patch({ nextJob: job.id + 1 });
+        const clean = r.leftMs >= r.limitMs * CLEAN_SHARE;
+        const xp = crackSucceeded(host, clean);
+        emit({ type: "jobComplete", job, outcome: { kind: "crack", ip, ok: true, manual: { clean, leftMs: r.leftMs, moves: r.moves, xp } } });
+        return OK;
+      }
+      // The sweep ran out: fall back to the dice roll at worse odds.
+      startJob("crack", { target: ip, penalty: TIMEOUT_PENALTY }, { kind: "crack", host });
+      return OK;
+    },
+
+    setClock: (part, step) => {
+      const g = get().game;
+      patch({ tuning: { ...g.tuning, [part]: step } });
+    },
+
+    setProfile: (p) => {
+      const g = get().game;
+      patch({ tuning: { ...g.tuning, ...PROFILES[p] } });
+    },
+
+    launchOp: (opId, loadout) => {
+      const g = get().game;
+      const op = g.ops.board.find((o) => o.id === opId);
+      if (!op) return fail("err.opUnknown");
+      if (g.ops.active) return fail("err.opRunning");
+      if (g.player.level < op.level) return fail("err.levelTooLow", { level: op.level });
+      if (loadout.length > LOADOUT_SLOTS) return fail("err.loadoutFull");
+      const cost = loadout.reduce((n, id) => n + loadoutCost(id, op.tier), 0);
+      if (cost > 0) {
+        const paid = get().spend(cost, "txn.loadout", "purchase", { name: op.name });
+        if (!paid.ok) return paid;
+      }
+      const { hosts, stages } = opHosts(op);
+      const t = now();
+      const net = get().game.net;
+      patch({
+        net: { ...net, hosts: [...net.hosts.filter((h) => !hosts.some((x) => x.ip === h.ip)), ...hosts] },
+        ops: {
+          ...get().game.ops,
+          active: { opId, op: { ...op, stages }, startedAt: t, trace: 0, stage: 0, banked: 0, loadout, proxies: loadout.filter((l) => l === "ghost_proxy").length, pulled: 0 },
+        },
+      });
+      return OK;
+    },
+
+    useProxy: () => {
+      const g = get().game;
+      const run = g.ops.active;
+      if (!run) return fail("err.noOp");
+      if (run.proxies <= 0) return fail("err.noProxy");
+      patch({ ops: { ...g.ops, active: { ...run, proxies: run.proxies - 1, pausedUntil: now() + PROXY_MS } } });
+      return OK;
+    },
+
+    exfil: () => {
+      const g = get().game;
+      const run = g.ops.active;
+      if (!run) return fail("err.noOp");
+      const events: GameEvent[] = [];
+      const out = endOp(g, now(), false, events);
+      set({ game: out });
+      const ended = events.find((e) => e.type === "opEnded");
+      if (ended && ended.type === "opEnded") {
+        get().addXp(ended.xp);
+        // First S on an op: a bonus skill point. S or A may drop a module.
+        if (ended.result.grade === "S" && !g.ops.sGrades.includes(run.op.name)) {
+          patch({ ops: { ...get().game.ops, sGrades: [...get().game.ops.sGrades, run.op.name] } });
+          grantPoints(1);
+        }
+        if (ended.result.grade === "S" || ended.result.grade === "A") {
+          const def = moduleForTier(run.op.tier, Math.random());
+          if (def) {
+            get().writeFile(`C:/tools/${def.file}`, moduleFile(def));
+            const ops = get().game.ops;
+            patch({ ops: { ...ops, history: [{ ...ops.history[0], drop: def.file }, ...ops.history.slice(1)] } });
+          }
+        }
+      }
+      emitAll(events);
+      return OK;
+    },
+
+    replyRelay: (faction, id, choice) => {
+      const g = get().game;
+      let f = g.factions;
+      const m = f.threads[faction].find((x) => x.id === id);
+      if (!m || !m.choices?.includes(choice)) return fail("err.replyClosed");
+      const close = (fs: typeof f) => ({ ...fs, threads: { ...fs.threads, [faction]: fs.threads[faction].map((x) => (x.id === id ? { ...x, choices: undefined } : x)) } });
+      const rep = (fs: typeof f, who: FactionId, d: number) => ({ ...fs, rep: { ...fs.rep, [who]: clampRep(fs.rep[who] + d) } });
+      const t = now();
+      f = close(f);
+      if (m.offer) {
+        const o = m.offer;
+        const contract = (credits: number) => ({
+          id: uid("ctr"),
+          goal: o.goal,
+          tier: o.tier,
+          need: o.need,
+          progress: 0,
+          reward: { credits, xp: Math.round(credits / 10) },
+          status: "active" as const,
+          faction,
+          rep: o.rep,
+        });
+        f = send(f, faction, { from: "me", key: `relay.reply.${choice}`, vars: { rival: RIVAL_OF[faction] } }, t, []);
+        if (choice === "accept") {
+          patch({ contracts: [...get().game.contracts, contract(o.credits)] });
+          f = send(f, faction, { from: "them", key: `relay.ack.${faction}` }, t, []);
+        } else if (choice === "counter") {
+          if (Math.random() < 0.6) {
+            patch({ contracts: [...get().game.contracts, contract(Math.round(o.credits * 1.25))] });
+            f = send(rep(f, faction, -2), faction, { from: "them", key: "relay.counter.yes", vars: { credits: Math.round(o.credits * 1.25) } }, t, []);
+          } else f = send(rep(f, faction, -5), faction, { from: "them", key: "relay.counter.no" }, t, []);
+        } else {
+          const rival = RIVAL_OF[faction];
+          f = rep(rep(f, faction, o.leak.from), rival, o.leak.to);
+          f = send(f, rival, { from: "them", key: `relay.leaked.${rival}`, vars: { from: faction } }, t, []);
+          patch({ contracts: [...get().game.contracts, { ...contract(Math.round(o.credits * 0.8)), faction: rival, rep: o.rep }] });
+          patch({ factions: f });
+          // Hostile factions hit back: Halcyon raises your Heat, The Static glitches your desktop.
+          if (faction === "halcyon") get().addHeat(8);
+          if (faction === "static" || repTier(f.rep.static) === "hostile") emit({ type: "glitch" });
+          return OK;
+        }
+      } else if (m.chapter) {
+        const ch = m.chapter;
+        f = send(f, faction, { from: "me", key: `story.${faction}.${ch}.${choice}` }, t, []);
+        f = choice === "a" ? rep(f, faction, STORY_REP[0]) : rep(rep(f, faction, STORY_REP[1]), RIVAL_OF[faction], 4);
+        f = { ...f, chapter: { ...f.chapter, [faction]: Math.max(f.chapter[faction], ch) }, ending: ch === 5 ? `${faction}-${choice}` : f.ending, nextOfferAt: Math.min(f.nextOfferAt, t + 45_000) };
+        patch({ factions: f });
+        if (CHAPTER_POINT.includes(ch)) grantPoints(1);
+        return OK;
+      }
+      patch({ factions: f });
+      return OK;
+    },
+
+    readRelay: (faction) => {
+      const f = get().game.factions;
+      if (f.unread[faction]) patch({ factions: { ...f, unread: { ...f.unread, [faction]: 0 } } });
+    },
+
+    recordTrial: (id, rec) => {
+      const g = get().game;
+      const prev = g.trials[id];
+      const better = !prev || MEDAL_RANK[rec.medal] > MEDAL_RANK[prev.medal] || (rec.medal === prev.medal && rec.best < prev.best);
+      if (better) patch({ trials: { ...g.trials, [id]: { ...rec, best: Math.min(rec.best, prev?.best ?? Infinity) } } });
+      const xp = prev ? 0 : trialXp(TRIALS.findIndex((x) => x.id === id));
+      if (xp) get().addXp(xp);
+      // First Gold in a trial: a bonus skill point.
+      const point = rec.medal === "gold" && prev?.medal !== "gold";
+      if (point) grantPoints(1);
+      void TRIAL;
+      return { xp, point, best: better };
     },
 
     writeFile: (path, f) => applyFs(vfs.writeFile(get().game.fs, path, { ...f, modified: now() })),

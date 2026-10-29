@@ -12,6 +12,8 @@ import { Button, Icon, TextBox } from "../../ui";
 import { CompileStatus, compileLines, isXjs } from "../userApp/CompileStatus";
 import { caretPos, dropdown, editSelection, loadDoc, newDoc, saveText, SaveAsDialog, UnsavedDialog, useOpenRequests, type Doc } from "../editorShared";
 import { highlight } from "./highlight";
+import { completionsAt, errorLine, fixHint, SNIPPETS, type Completion } from "./assist";
+import { skillEffects } from "../../game/skills";
 import { SAMPLE_SCRIPT } from "./sample";
 import "./editor.css";
 
@@ -24,7 +26,7 @@ const PAD_TOP = 8;
 /** Minimap: px per code line */
 const MINI_H = 3;
 
-type View = "explorer" | "search" | "run";
+type View = "explorer" | "search" | "run" | "snippets";
 type PanelTab = "problems" | "output" | "console";
 interface Line {
   level: LogLevel | "sys";
@@ -77,6 +79,9 @@ export function ScriptEditor() {
   const [saveAs, setSaveAs] = useState<Doc | null>(null);
   const [closing, setClosing] = useState<Doc | null>(null);
   const [showMinimap, setShowMinimap] = useState(true);
+  // Code-branch skills: Autocomplete flyout, Snippets view, Error lens
+  const skillFx = useGame((s) => skillEffects(s.game.player.skills));
+  const [ac, setAc] = useState<{ from: number; items: Completion[]; sel: number } | null>(null);
 
   const handle = useRef<ScriptHandle | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -174,6 +179,11 @@ export function ScriptEditor() {
   const stop = () => handle.current?.stop();
 
   // ---- analysis ----
+  const lens = useMemo(() => {
+    if (!script || !skillFx.errorLens) return null;
+    const n = errorLine(doc.content, (src) => void new AsyncFunction(src));
+    return n;
+  }, [doc.content, script, skillFx.errorLens]);
   const problems = useMemo(() => {
     if (!script) return [];
     try {
@@ -318,8 +328,47 @@ export function ScriptEditor() {
   ];
 
   // ---- keyboard ----
+  const accept = (c: Completion) => {
+    const el = ta();
+    const from = ac!.from;
+    const at = el.selectionStart;
+    const value = el.value.slice(0, from) + c.insert + el.value.slice(at);
+    setContent(value);
+    setAc(null);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(from + c.insert.length, from + c.insert.length);
+    });
+  };
+  const insertSnippet = (code: string) => {
+    editSelection(ta(), setContent, (v, s, en) => ({ value: v.slice(0, s) + code + v.slice(en), start: s + code.length, end: s + code.length }));
+    ta().focus();
+  };
+  const onEdit = (value: string, caret: number) => {
+    setContent(value);
+    const c = script ? completionsAt(value, caret, skillFx.autocomplete) : null;
+    setAc(c ? { ...c, sel: 0 } : null);
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     const ctrl = e.ctrlKey || e.metaKey;
+    if (ac) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setAc({ ...ac, sel: (ac.sel + (e.key === "ArrowDown" ? 1 : ac.items.length - 1)) % ac.items.length });
+        return;
+      }
+      if (e.key === "Tab" || e.key === "Enter") {
+        e.preventDefault();
+        accept(ac.items[ac.sel]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setAc(null);
+        return;
+      }
+    }
     const k = e.key.toLowerCase();
     if (ctrl && k === "s") e.shiftKey ? setSaveAs(doc) : write(doc);
     else if (ctrl && e.key === "Enter") run();
@@ -446,12 +495,16 @@ export function ScriptEditor() {
               ["explorer", "icon/square_multiple", t("ide.explorer")],
               ["search", "icon/search", t("ide.search")],
               ["run", "icon/developer_board", t("ide.runView")],
+              ...(skillFx.snippets ? ([["snippets", "icon/document", t("skill.snippets")]] as [View, string, string][]) : []),
             ] as [View, string, string][]
           ).map(([v, icon, label]) => (
             <button type="button" key={v} className={`ide-act ${view === v ? "on" : ""}`} title={label} aria-label={label} onClick={() => toggleView(v)}>
               <Icon name={icon} size={24} />
             </button>
           ))}
+          <button type="button" className="ide-act" title={t("trials.title")} aria-label={t("trials.title")} onClick={() => ws().open("trials")}>
+            <Icon name="icon/checkmark_circle" size={24} />
+          </button>
           <span className="spacer" />
           <button type="button" className="ide-act" title={t("app.settings")} aria-label={t("app.settings")} onClick={() => ws().open("settings")}>
             <Icon name="icon/settings" size={24} />
@@ -544,6 +597,23 @@ export function ScriptEditor() {
                 </div>
               </>
             )}
+            {view === "snippets" && (
+              <>
+                <div className="ide-side-head t-caption">{t("skill.snippets").toUpperCase()}</div>
+                <div className="ide-run">
+                  {SNIPPETS.slice(0, skillFx.snippets).map((s) => (
+                    <div key={s.id} className="ide-snippet">
+                      <div className="t-body-strong">{t(`snippet.${s.id}`)}</div>
+                      <pre className="t-caption c-secondary">{s.code.split("\n").slice(0, 3).join("\n")}…</pre>
+                      <Button disabled={!script} onClick={() => insertSnippet(s.code)}>
+                        {t("snippet.insert")}
+                      </Button>
+                    </div>
+                  ))}
+                  {skillFx.snippets < SNIPPETS.length && <div className="t-caption c-tertiary">{t("snippet.more")}</div>}
+                </div>
+              </>
+            )}
           </aside>
         )}
 
@@ -608,13 +678,38 @@ export function ScriptEditor() {
           <div className="ide-code">
             <div className="ide-gutter" ref={gutterRef}>
               {codeLines.map((_, i) => (
-                <div key={i} className={i + 1 === cursor.line ? "on" : ""}>
+                <div key={i} className={`${i + 1 === cursor.line ? "on" : ""} ${i + 1 === lens ? "lens" : ""}`}>
                   {i + 1}
                 </div>
               ))}
             </div>
             <div className="ide-input">
               <div className="ide-active-line" style={{ top: PAD_TOP + (cursor.line - 1) * LINE_H - scroll.top }} />
+              {lens && <div className="ide-lens-line" style={{ top: PAD_TOP + (lens - 1) * LINE_H - scroll.top }} />}
+              {ac && (
+                <div className="ide-ac" style={{ top: PAD_TOP + cursor.line * LINE_H - scroll.top + 2, left: Math.min(420, cursor.col * 7.8) }}>
+                  {ac.items.map((c, i) => (
+                    <button
+                      type="button"
+                      key={c.label}
+                      className={`ide-ac-item ${i === ac.sel ? "on" : ""}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        accept(c);
+                      }}
+                    >
+                      <span className="t-mono">{c.label}</span>
+                      <span className="t-caption c-tertiary">{c.ret}</span>
+                    </button>
+                  ))}
+                  {skillFx.autocomplete >= 2 && (
+                    <div className="ide-ac-doc t-caption">
+                      <div className="c-secondary">{ac.items[ac.sel].sig}</div>
+                      <div className="c-accent">{t("ac.footer", { rank: skillFx.autocomplete })}</div>
+                    </div>
+                  )}
+                </div>
+              )}
               <pre className="editor-highlight" ref={preRef} aria-hidden dangerouslySetInnerHTML={{ __html: highlight(doc.content, !script) }} />
               <textarea
                 ref={taRef}
@@ -623,7 +718,8 @@ export function ScriptEditor() {
                 value={doc.content}
                 spellCheck={false}
                 autoFocus
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => onEdit(e.target.value, e.target.selectionStart)}
+                onBlur={() => setAc(null)}
                 onScroll={syncScroll}
                 onKeyDown={onKeyDown}
                 onKeyUp={track}
@@ -679,6 +775,11 @@ export function ScriptEditor() {
                       <div key={i} className="ide-problem">
                         <Icon name="icon/error_circle" size={14} />
                         <span>{p}</span>
+                        {lens && (
+                          <button type="button" className="link-btn t-caption" onClick={() => goToLine(lens)}>
+                            {t("lens.line", { n: lens })} · {t(fixHint(p))}
+                          </button>
+                        )}
                         <span className="c-tertiary">{doc.name}</span>
                       </div>
                     ))

@@ -9,6 +9,7 @@ export const SLOTS: { kind: PartKind; label: string }[] = [
   { kind: "ram", label: "Memory" },
   { kind: "net", label: "Network card" },
   { kind: "disk", label: "Storage" },
+  { kind: "cool", label: "Cooling" },
 ];
 
 export interface RigStats {
@@ -17,6 +18,8 @@ export interface RigStats {
   ramGB: number;
   netMbps: number;
   diskGB: number;
+  /** Safe temperature ceiling from the cooler, °C */
+  ceiling: number;
   /** Highest tier among installed parts' lowest: the rig is only as good as its weakest part. */
   tier: number;
   /** Per-part tier ("CPU Lv.2") */
@@ -27,12 +30,13 @@ export interface RigStats {
 export function rigStats(rig: Rig): RigStats {
   const value = (k: PartKind) => (rig[k] ? getModel(rig[k]!.modelId).value : 0);
   const level = (k: PartKind) => (rig[k] ? getModel(rig[k]!.modelId).tier : 0);
-  const levels = { cpu: level("cpu"), ram: level("ram"), net: level("net"), disk: level("disk") };
+  const levels = { cpu: level("cpu"), ram: level("ram"), net: level("net"), disk: level("disk"), cool: level("cool") };
   return {
     cpu: value("cpu"),
     ramGB: value("ram"),
     netMbps: value("net"),
     diskGB: value("disk"),
+    ceiling: rig.cool ? value("cool") : 70,
     tier: Math.min(levels.cpu, levels.ram, levels.net, levels.disk),
     levels,
   };

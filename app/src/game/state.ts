@@ -5,6 +5,12 @@ import { refillContracts } from "./contracts";
 import { BAIL, CONTRACT_POOL } from "./balance";
 import type { Contract, DirNode, Host, InstalledApp, Job, Legal, Order, Part, Session, Txn } from "./types";
 import { starterDrive } from "./vfs";
+import { newSkills, type SkillState } from "./skills";
+import { newTuning, type Tuning } from "./thermal";
+import { newOps, type OpsState } from "./ops";
+import { factionPerks, newFactions, type FactionState } from "./factions";
+import { newRivals, type RivalState } from "./rivals";
+import type { TrialsState } from "./trials";
 
 export interface IncomeSource {
   id: string;
@@ -64,6 +70,16 @@ export interface GameState {
   apps: InstalledApp[];
   /** Software bought on Xea Soft (catalog ids); bought items download free again */
   software: string[];
+  /** Overclock clocks and rig temperature (game/thermal.ts) */
+  tuning: Tuning;
+  /** Ops Board (game/ops.ts) */
+  ops: OpsState;
+  /** Relay factions, reputation and story (game/factions.ts) */
+  factions: FactionState;
+  /** Ghost Board rivals, league and races (game/rivals.ts) */
+  rivals: RivalState;
+  /** Script Trials medals (game/trials.ts) */
+  trials: TrialsState;
 }
 
 /** The player's character and progression (GDD 4). Grouped so it saves and resets as a unit. */
@@ -73,6 +89,8 @@ export interface Player {
   xp: number;
   /** Lifetime counters for the Profile app */
   stats: GameStats;
+  /** Skill Tree ranks and points (game/skills.ts) */
+  skills: SkillState;
 }
 
 export interface GameStats {
@@ -83,6 +101,10 @@ export interface GameStats {
   arrests: number;
   /** Highest Heat reached */
   peakHeat: number;
+  /** Lockgrid solves with time to spare */
+  cleanCracks?: number;
+  ops?: number;
+  races?: number;
 }
 
 export function uid(prefix: string): string {
@@ -96,7 +118,7 @@ export function newGame(now = Date.now()): GameState {
     createdAt: now,
     lastTick: now,
     setupDone: false,
-    player: { name: "ghost_user", level: 1, xp: 0, stats: { cracks: 0, pulls: 0, dataSold: 0, contracts: 0, arrests: 0, peakHeat: 0 } },
+    player: { name: "ghost_user", level: 1, xp: 0, stats: { cracks: 0, pulls: 0, dataSold: 0, contracts: 0, arrests: 0, peakHeat: 0, cleanCracks: 0, ops: 0, races: 0 }, skills: newSkills() },
     wallet: {
       balance: STARTING_BALANCE,
       debt: 0,
@@ -110,6 +132,7 @@ export function newGame(now = Date.now()): GameState {
       ram: starter(STARTER_RIG.ram),
       net: starter(STARTER_RIG.net),
       disk: starter(STARTER_RIG.disk),
+      cool: starter(STARTER_RIG.cool),
     },
     stock: [],
     orders: [],
@@ -125,6 +148,11 @@ export function newGame(now = Date.now()): GameState {
     modules: [],
     apps: [],
     software: [],
+    tuning: newTuning(),
+    ops: newOps(1, now),
+    factions: newFactions(now),
+    rivals: newRivals(now),
+    trials: {},
   };
 }
 
@@ -134,5 +162,6 @@ export function incomePerHour(g: GameState): number {
 
 /** Bail owed at a warrant (GDD 3.6.2): scales with level and data sold. */
 export function bailAmount(g: GameState): number {
-  return BAIL.base + g.player.level * BAIL.perLevel + g.soldHashes.length * BAIL.perHash;
+  const legal = factionPerks(g.factions?.rep ?? { chimera: 0, halcyon: 0, static: 0 }).bail;
+  return Math.round((BAIL.base + g.player.level * BAIL.perLevel + g.soldHashes.length * BAIL.perHash) * legal);
 }

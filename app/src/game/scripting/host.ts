@@ -7,6 +7,9 @@ import type { Host } from "../types";
 import * as vfs from "../vfs";
 import ScriptWorker from "./worker.ts?worker&inline";
 import type { FromWorker, LogLevel, ToWorker } from "./protocol";
+import { msg } from "../../i18n";
+import { skillEffects } from "../skills";
+import { codeLines, goals, makeSandbox, medalFor, passed, sandboxCall, clockText, type Medal, type Sandbox, type TrialDef } from "../trials";
 
 // Main-thread bridge (GDD 3.3.2): turns the worker's RPC calls into safe store actions.
 // Job-based calls (scan/probe/crack/pull) resolve when the matching job finishes in the loop.
@@ -26,7 +29,22 @@ function check(r: Result): void {
   if (!r.ok) throw new Error(tm(r.error));
 }
 
+/** Scripts running right now; the Twin threads skill allows a second one. */
+let running = 0;
+export const runningScripts = () => running;
+
 export function runScript(code: string, cb: ScriptCallbacks): ScriptHandle {
+  const slots = skillEffects(useGame.getState().game.player.skills).scriptSlots;
+  if (running >= slots) {
+    queueMicrotask(() => cb.onDone(tm(msg("err.scriptSlots", { n: slots }))));
+    return { stop: () => {} };
+  }
+  running++;
+  let counted = true;
+  const release = () => {
+    if (counted) running--;
+    counted = false;
+  };
   const worker: Worker = new ScriptWorker();
   const g = () => useGame.getState();
   let finished = false;
@@ -137,6 +155,7 @@ export function runScript(code: string, cb: ScriptCallbacks): ScriptHandle {
   };
 
   function cleanup() {
+    release();
     off();
     waiters.splice(0).forEach((w) => w.reject(new Error("stopped")));
   }
@@ -153,4 +172,57 @@ export function runScript(code: string, cb: ScriptCallbacks): ScriptHandle {
       }
     },
   };
+}
+
+export interface TrialResult {
+  pass: boolean;
+  medal?: Medal;
+  reason?: "goals" | "calls" | "time" | "error" | "stopped";
+  sandbox: Sandbox;
+  lines: number;
+}
+
+/**
+ * Run a script against a Script Trials sandbox (game/trials.ts). Calls never touch the real store;
+ * each one is answered after a short real delay so the console streams.
+ */
+export function runTrial(code: string, def: TrialDef, cb: { onLog: (level: LogLevel, text: string) => void; onUpdate: (s: Sandbox) => void; onDone: (r: TrialResult) => void }): ScriptHandle {
+  const worker: Worker = new ScriptWorker();
+  const sb = makeSandbox(def);
+  const lines = codeLines(code);
+  let finished = false;
+  const finish = (r: Omit<TrialResult, "sandbox" | "lines">) => {
+    if (finished) return;
+    finished = true;
+    worker.terminate();
+    cb.onUpdate({ ...sb });
+    cb.onDone({ ...r, sandbox: sb, lines });
+  };
+  const stamp = (text: string) => `[${clockText(sb)}] ${text}`;
+  worker.onmessage = (e: MessageEvent<FromWorker>) => {
+    const m = e.data;
+    if (m.type === "log") cb.onLog(m.level, stamp(m.text));
+    else if (m.type === "done") {
+      if (m.error) return finish({ pass: false, reason: "error" });
+      const ok = passed(sb);
+      finish(ok ? { pass: true, medal: medalFor(def, sb.clock) } : { pass: false, reason: "goals" });
+    } else if (m.type === "rpc") {
+      window.setTimeout(() => {
+        if (finished) return;
+        try {
+          const { result, log } = sandboxCall(sb, m.method, m.args);
+          if (log) cb.onLog("info", stamp(log));
+          cb.onUpdate({ ...sb });
+          if (sb.calls > def.maxCalls) return finish({ pass: false, reason: "calls" });
+          if (sb.clock > def.maxSec) return finish({ pass: false, reason: "time" });
+          worker.postMessage({ type: "reply", id: m.id, ok: true, result } satisfies ToWorker);
+        } catch (err) {
+          worker.postMessage({ type: "reply", id: m.id, ok: false, error: err instanceof Error ? err.message : String(err) } satisfies ToWorker);
+        }
+      }, m.method === "sleep" ? 10 : 40);
+    }
+  };
+  worker.postMessage({ type: "run", code, sandbox: true } satisfies ToWorker);
+  void goals;
+  return { stop: () => finish({ pass: false, reason: "stopped" }) };
 }

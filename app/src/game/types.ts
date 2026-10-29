@@ -1,5 +1,5 @@
 export type Rarity = "Common" | "Rare" | "Epic" | "Legendary";
-export type PartKind = "cpu" | "ram" | "net" | "disk";
+export type PartKind = "cpu" | "ram" | "net" | "disk" | "cool";
 
 export interface PartModel {
   id: string;
@@ -11,7 +11,7 @@ export interface PartModel {
   price: number;
   /** Delivery time in seconds */
   eta: number;
-  /** cpu: GHz x cores, ram: GB, net: Mbps, disk: GB */
+  /** cpu: GHz x cores, ram: GB, net: Mbps, disk: GB, cool: safe temperature ceiling in °C */
   value: number;
   spec: string;
 }
@@ -73,6 +73,8 @@ export interface Host {
   admin: "Low" | "Medium" | "High";
   discovered: boolean;
   fs: DirNode;
+  /** Set on hosts made for an Operation stage (game/ops.ts) */
+  op?: string;
 }
 
 export type OrderStage = 0 | 1 | 2 | 3; // Ordered, Packed, On the way, Delivered
@@ -119,6 +121,9 @@ export interface Contract {
   progress: number;
   reward: { credits: number; xp: number };
   status: ContractStatus;
+  /** Contracts offered through Relay carry the faction and the rep they give when claimed (game/factions.ts) */
+  faction?: string;
+  rep?: number;
 }
 
 export type JobKind = "scan" | "probe" | "crack" | "pull" | "download" | "compile";
@@ -138,6 +143,8 @@ export interface Job {
   endsAt: number;
   /** Share of rig CPU/network this job claims, 0..1, for Task Manager graphs */
   load: number;
+  /** Lockgrid timeout fallback: crack odds penalty (fraction) */
+  penalty?: number;
   /** download / compile: what to write when the job finishes (see game/appsdk/jobs.ts) */
   payload?: Record<string, string>;
 }
@@ -151,6 +158,8 @@ export interface Session {
   cwd: string;
   /** The "30 seconds left" warning has fired for this session */
   warned?: boolean;
+  /** Trace stands still until this time (Ghost veil skill, Ghost proxy in an Operation) */
+  pausedUntil?: number;
 }
 
 export interface Proc {

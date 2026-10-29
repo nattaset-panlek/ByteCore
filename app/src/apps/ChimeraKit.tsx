@@ -24,6 +24,7 @@ export function ChimeraKit() {
             {t("chimera.openTerminal")}
           </Button>
         </Card>
+        <CrackTargets />
       </div>
     );
   }
@@ -107,5 +108,43 @@ export function ChimeraKit() {
         </div>
       </section>
     </div>
+  );
+}
+
+/** Probed hosts still to crack, each with the hands-on Lockgrid (docs/gameplay-ideas.md §1). */
+function CrackTargets() {
+  const t = useT();
+  const hosts = useGame((s) => s.game.net.hosts.filter((h) => h.portsKnown && !h.cracked));
+  const jobs = useGame((s) => s.game.jobs);
+  if (!hosts.length) return null;
+  return (
+    <section className="app-section">
+      <div className="app-section-head">
+        <span className="t-body-strong">{t("chimera.toCrack")}</span>
+      </div>
+      <div className="card-grid">
+        {hosts.map((h) => {
+          const busy = jobs.some((j) => j.kind === "crack" && j.target === h.ip);
+          return (
+            <Card key={h.ip}>
+              <div className="part-title">
+                <span className="t-body-strong">{h.org}</span>
+                <span className="t-caption c-secondary">
+                  {h.ip} · {t("chimera.tier", { tier: h.tier })} · {t("chimera.security", { security: h.security })}
+                </span>
+              </div>
+              <div className="row-gap">
+                <Button variant="accent" disabled={busy} onClick={() => useWindows.getState().open("lockgrid", { ip: h.ip })}>
+                  {t("grid.open")}
+                </Button>
+                <Button disabled={busy} onClick={() => useGame.getState().crack(h.ip)}>
+                  {t("chimera.autoCrack")}
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </section>
   );
 }

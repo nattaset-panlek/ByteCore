@@ -8,6 +8,8 @@ const ctx = self as unknown as Worker;
 const post = (m: FromWorker) => ctx.postMessage(m);
 
 let seq = 0;
+/** Script Trials: sleep() advances the sandbox clock instead of waiting. */
+let sandbox = false;
 const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
 
 function rpc<T = unknown>(method: string, args: unknown[] = []): Promise<T> {
@@ -55,7 +57,7 @@ const ByteCore = {
   sellData: (paths: string[]) => rpc("sellData", [paths]),
   scrubHeat: () => rpc("scrubHeat"),
   /** Pause the script (max 60 s per call). */
-  sleep: (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, Math.min(60000, ms)))),
+  sleep: (ms: number) => (sandbox ? rpc("sleep", [ms]) : new Promise((r) => setTimeout(r, Math.max(0, Math.min(60000, ms))))),
   logger: {
     info: (...a: unknown[]) => log("info", a),
     warn: (...a: unknown[]) => log("warn", a),
@@ -86,6 +88,7 @@ async function run(code: string) {
 ctx.onmessage = (e: MessageEvent<ToWorker>) => {
   const m = e.data;
   if (m.type === "run") {
+    sandbox = !!m.sandbox;
     run(m.code);
   } else if (m.type === "reply") {
     const p = pending.get(m.id);

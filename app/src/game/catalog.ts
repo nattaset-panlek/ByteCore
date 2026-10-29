@@ -58,6 +58,13 @@ export const PARTS: PartModel[] = [
   part("disk-t3-b", "disk", "Halden NVMe 2T", "Halden", 3, "Epic", 6900, 840, 2000, "2 TB NVMe"),
   part("disk-t4-a", "disk", "Kestrel Array 4T", "Kestrel", 4, "Epic", 24000, 1800, 4000, "4 TB storage array"),
   part("disk-t4-b", "disk", "Kestrel Array 8T", "Kestrel", 4, "Legendary", 44000, 3000, 8000, "8 TB storage array"),
+
+  // Coolers (Overclock): value is the safe temperature ceiling in °C
+  part("cool-t1-a", "cool", "Stock fan", "Corvid", 1, "Common", 30, 60, 75, "Safe ceiling 75 °C"),
+  part("cool-t1-b", "cool", "Breeze Air", "Corvid", 1, "Common", 160, 90, 80, "Air cooler, safe ceiling 80 °C"),
+  part("cool-t2-a", "cool", "Frostline 240", "Halden", 2, "Rare", 900, 180, 90, "Liquid 240 mm, safe ceiling 90 °C"),
+  part("cool-t3-a", "cool", "Frostline 360", "Halden", 3, "Epic", 3600, 600, 96, "Liquid 360 mm, safe ceiling 96 °C"),
+  part("cool-t4-a", "cool", "Kestrel Cryo Loop", "Kestrel", 4, "Legendary", 21000, 1800, 110, "Cryo loop, safe ceiling 110 °C"),
 ];
 
 const BY_ID = new Map(PARTS.map((p) => [p.id, p]));
@@ -73,6 +80,7 @@ export const STARTER_RIG: Record<PartKind, string> = {
   ram: "ram-t1-a",
   net: "net-t1-a",
   disk: "disk-t1-a",
+  cool: "cool-t1-a",
 };
 
 /** Parts that the shop sells. Starter parts are not sold; their price only sets the resale value. */

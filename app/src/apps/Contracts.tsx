@@ -94,6 +94,7 @@ function ContractCard({ contract: c }: { contract: Contract }) {
             {t("contracts.tier", { tier: c.tier })}
           </span>
         </div>
+        {c.faction && <Badge>{t(`faction.${c.faction}`)}</Badge>}
         <Badge tone="accent">{credits(c.reward.credits)}</Badge>
       </div>
       <div className="part-kvs">

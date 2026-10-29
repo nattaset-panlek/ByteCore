@@ -13,6 +13,8 @@ import type { GameEvent } from "./events";
 import { TRACE_PER_SEC } from "./network";
 import { bailAmount, incomePerHour, uid, type GameState } from "./state";
 import type { Legal, Order, OrderStage, Session, Txn } from "./types";
+import { skillEffects } from "./skills";
+import { tickGameplay } from "./gameplayTick";
 
 export const STAGE_LABELS = ["Ordered", "Packed", "On the way", "Delivered"] as const;
 
@@ -47,10 +49,12 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
     events.push({ type: "released" });
   }
 
-  // Trace while connected (GDD 3.6): disconnect is forced at 100.
-  if (session) {
-    const host = g.net.hosts.find((h) => h.ip === session!.ip);
-    const rate = host ? TRACE_PER_SEC[host.admin] : TRACE_PER_SEC.Medium;
+  const fx = skillEffects(g.player.skills);
+  // Trace while connected (GDD 3.6): disconnect is forced at 100. Op hosts follow the op's shared trace
+  // (gameplayTick); Ghost veil holds it still for a while.
+  const host = session ? g.net.hosts.find((h) => h.ip === session!.ip) : undefined;
+  if (session && !host?.op && !(session.pausedUntil && now < session.pausedUntil)) {
+    const rate = (host ? TRACE_PER_SEC[host.admin] : TRACE_PER_SEC.Medium) * fx.trace;
     const trace = session.trace + (rate * dt) / 1000;
     if (trace >= 100) {
       heat = Math.min(HEAT_MAX, heat + HEAT.traced);
@@ -60,7 +64,7 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
     } else {
       const secondsLeft = Math.ceil((100 - trace) / rate);
       session = { ...session, trace };
-      if (!session.warned && secondsLeft <= 30) {
+      if (!session.warned && (secondsLeft <= 30 || (fx.warnAt > 0 && trace >= fx.warnAt))) {
         session = { ...session, warned: true };
         events.push({ type: "traceWarning", ip: session.ip, secondsLeft });
       }
@@ -94,7 +98,7 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
   }
 
   // Heat decay
-  if (heat > 0) heat = Math.max(0, heat - (HEAT_DECAY_PER_MIN * dt) / 60_000);
+  if (heat > 0) heat = Math.max(0, heat - (HEAT_DECAY_PER_MIN * fx.heatDecay * dt) / 60_000);
 
   // Debt interest, once per game day
   if (wallet.debt <= 0) {
@@ -123,5 +127,7 @@ export function tick(g: GameState, now: number): { game: GameState; events: Game
   const player =
     peakHeat === g.player.stats.peakHeat && arrests === g.player.stats.arrests ? g.player : { ...g.player, stats: { ...g.player.stats, peakHeat, arrests } };
   const net = session === g.net.session ? g.net : { ...g.net, session };
-  return { game: { ...g, lastTick: now, wallet, txns, heat, orders, net, legal, jobs, player }, events };
+  let game: GameState = { ...g, lastTick: now, wallet, txns, heat, orders, net, legal, jobs, player };
+  if (legal.state === "free") game = tickGameplay(game, now, dt, events);
+  return { game, events };
 }
